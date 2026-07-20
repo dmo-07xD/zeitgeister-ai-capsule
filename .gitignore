@@ -1,0 +1,31 @@
+# Local authentication material — never commit it.
+*.key
+.zeitgeister/
+local-state/
+capsule-*.json
+*.capsule.json
+generated-capsules/
+
+# Credentials and local-only material
+.env
+.env.*
+*.pem
+*.p12
+*.pfx
+*.token
+credentials/
+secrets/
+
+# Temporary files
+*.tmp
+tmp/
+temp/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+
+# OS files
+.DS_Store

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Zeitgeister AI Capsule",
+  "description": "A portable handoff with local-integrity metadata. JSON Schema documents shape; the CLI performs HMAC verification.",
+  "type": "object",
+  "required": ["format", "version", "capsule_id", "project_goal", "project_ethos", "constraints", "decisions", "blockers", "next_steps", "provenance", "timestamps", "parent_hash", "integrity"],
+  "properties": {
+    "format": {"const": "zeitgeister-ai-capsule"},
+    "version": {"const": 1},
+    "capsule_id": {"type": "string"},
+    "project_goal": {"type": "string", "minLength": 1},
+    "project_ethos": {"type": "string", "minLength": 1},
+    "constraints": {"type": "array", "items": {"type": "string"}},
+    "decisions": {"type": "array", "items": {"type": "object", "required": ["decision", "rationale"], "properties": {"decision": {"type": "string", "minLength": 1}, "rationale": {"type": "string", "minLength": 1}}}},
+    "blockers": {"type": "array", "items": {"type": "string"}},
+    "next_steps": {"type": "array", "items": {"type": "string"}},
+    "provenance": {"type": "object"},
+    "timestamps": {"type": "object", "required": ["created_at", "updated_at"], "properties": {"created_at": {"type": "string"}, "updated_at": {"type": "string"}}},
+    "parent_hash": {"type": ["string", "null"]},
+    "integrity": {"type": "object", "required": ["content_hash_algorithm", "authentication_algorithm", "key_id", "content_hash", "signature"], "properties": {"content_hash_algorithm": {"const": "SHA-256"}, "authentication_algorithm": {"const": "HMAC-SHA256"}, "key_id": {"type": "string"}, "content_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "signature": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "project_goal": "Build a fictional Political Economy country-quarter dataset.",
+  "project_ethos": "Preserve reproducibility and never disguise a plan as an observation.",
+  "constraints": ["Non-sensitive fictional sample", "Standard library only"],
+  "decisions": [{"decision": "Establish the country-quarter spine first", "rationale": "It exposes coverage and coding choices before joins."}],
+  "blockers": ["Awaiting a fictional codebook review."],
+  "next_steps": ["Review the spine", "Record transformations."],
+  "provenance": {"authoring_context": "Example only", "sources": ["Illustrative data"], "tool": "Zeitgeister"}
+}
