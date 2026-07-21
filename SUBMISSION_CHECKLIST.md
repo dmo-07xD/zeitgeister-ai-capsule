@@ -5,6 +5,7 @@
 - [x] GitHub repository is public and accessible: https://github.com/dmo-07xD/zeitgeister-ai-capsule
 - [x] `main` is published and tracks `origin/main`.
 - [x] README contains setup, testing, trust-model, Codex, and GPT-5.6 documentation.
+- [x] README presents architecture, installation, a 60-second test path, sample output, limitations, and the consequential design decision.
 - [x] Inter-agent guide documents GPT, Gemini, Claude, Grok, Qwen, Kimi, local-model, and generic-agent transfers.
 - [x] Non-sensitive sample input is included at `examples/dataset-handoff-input.json`.
 - [x] MIT license is included.

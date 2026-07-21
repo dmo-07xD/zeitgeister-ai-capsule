@@ -16,6 +16,12 @@ Zeitgeister AI Capsule creates a compact JSON handoff containing the project goa
 
 The demonstration uses fictional, non-sensitive Political Economy country-quarter research to show why provenance and continuity matter in long-running analytical work. Zeitgeister’s security claim is intentionally narrow: it provides local authentication and edit detection for holders of the same key. It does not encrypt content, make records immutable, or prove authorship to third parties.
 
+## Consequential design decision
+
+We rejected invisible conversational memory in favor of signed, inspectable capsules because continuity without provenance can reproduce misunderstandings with increasing confidence.
+
+That choice shaped the implementation. The handoff became a visible object with canonical bytes, decision rationales, evidence status, artifact status, provenance, a content hash, and local authentication. “Signed” here means HMAC-authenticated with a user-controlled shared secret—not a public signature or third-party authorship claim. The constraint made the technology more testable and the idea more honest.
+
 ## How I used Codex/GPT-5.6
 
 I built the MVP in a primary Codex task with GPT-5.6 as the implementation and reasoning collaborator. Codex helped translate the handoff concept into a standard-library architecture, define which fields belong inside the authenticated canonical payload, implement the CLI workflow, document separate sender-input and authenticated-capsule schemas, and create the guided demonstration. It also helped reason through failure cases such as malformed model JSON, wrong or missing keys, empty redirected outputs, missing provenance, tampered content, guarded updates, and broken lineage.
