@@ -16,6 +16,8 @@
 ## Devpost
 
 - [ ] Demo video is under three minutes.
+- [ ] Demo visibly transfers a fictional, non-sensitive project from GPT to Kimi with `guided-transfer`.
+- [ ] Demo shows successful local verification and the Kimi receiver acknowledgement.
 - [ ] Demo includes voiceover explaining the project, Codex use, and GPT-5.6 use.
 - [ ] Demo is uploaded to YouTube as a public video.
 - [ ] Public video link works in a private browser window.

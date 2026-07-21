@@ -33,8 +33,9 @@ The Codex product returned Feedback ID `019f811f-ebab-70a1-808f-bd37b1c2dea7` fr
 
 **PREPARATION RESOLVED; RECORDING REMAINS UNCONFIRMED.**
 
-- `DEMO_SCRIPT.md` contains an exact 2:45 narration plan and recording command.
-- The flow covers create, validate/verify, tamper detection, resume, update, and lineage verification.
+- `DEMO_SCRIPT.md` contains an exact 2:40 GPT-to-Kimi browser-transfer plan, setup text, commands, shot list, narration, expected receiver acknowledgement, and recording checklist.
+- The primary video flow now profiles the completed improvements: one-command guided transfer, robust clipboard JSON extraction, structured claims, artifact status, transfer bundles, local re-verification, and model-neutral sender/receiver labels.
+- The deterministic `python3 demo.py --guided` flow remains documented as the fallback proof for create, validate/verify, expected tamper failure, resume, update, and lineage verification.
 - The script explicitly explains Codex and GPT-5.6 use and the honest local-trust limitation.
 - The human entrant must still record, upload, and verify the public video.
 
@@ -75,7 +76,7 @@ The Codex product returned Feedback ID `019f811f-ebab-70a1-808f-bd37b1c2dea7` fr
 ## Immediate human sequence
 
 1. Enter the confirmed Feedback ID from `CODEX_SESSION_ID.txt` in Devpost.
-2. Record the narrated demo using `DEMO_SCRIPT.md`.
+2. Record the narrated GPT-to-Kimi demo using `DEMO_SCRIPT.md`.
 3. Upload it publicly to YouTube and test the URL while signed out.
 4. Paste the prepared copy from `DEVPOST_SUBMISSION.md` into Devpost.
 5. Complete every unchecked item in `SUBMISSION_CHECKLIST.md`.
