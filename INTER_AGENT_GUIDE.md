@@ -12,7 +12,22 @@ On macOS, run:
 python3 -m zeitgeister guided-transfer --from GPT --to Qwen --key local-state/gpt-to-qwen.key
 ```
 
-The CLI copies the GPT instruction, displays four numbered steps, and waits. Paste into GPT, copy its completed response, return to the same Terminal, and press Return. Zeitgeister then validates and verifies the capsule and replaces the clipboard with the Qwen prompt. The longer workflow below remains useful when you want to see each independent command.
+The CLI copies the sender instruction, displays four numbered steps, and waits. Paste into the named sender, copy its completed response, return to the same Terminal, and press Return. Zeitgeister then validates and verifies the capsule and replaces the clipboard with the receiver prompt. The longer workflow below remains useful when you want to see each independent command.
+
+Substitute any text-capable sender and receiver:
+
+```sh
+python3 -m zeitgeister guided-transfer --from "SENDER" --to "RECEIVER" --key local-state/sender-to-receiver.key
+```
+
+Confirmed walkthrough commands:
+
+```sh
+python3 -m zeitgeister guided-transfer --from GPT --to Qwen --key local-state/gpt-to-qwen.key
+python3 -m zeitgeister guided-transfer --from Grok --to Kimi --key local-state/grok-to-kimi.key
+```
+
+Both completed the browser-to-browser workflow during user testing on July 21, 2026. This is a record of those tests, not a promise about future provider interface behavior.
 
 ## Exact manual GPT to Kimi workflow on macOS
 
@@ -62,6 +77,7 @@ Replace only the two agent labels and the key filename. The same four steps work
 | --- | --- | --- |
 | Gemini to Claude | `python3 -m zeitgeister sender-prompt --from Gemini --to Claude --copy` | `python3 -m zeitgeister transfer --from Gemini --to Claude --input-clipboard --key local-state/gemini-to-claude.key --output-dir generated-capsules --copy-prompt` |
 | Claude to Grok | `python3 -m zeitgeister sender-prompt --from Claude --to Grok --copy` | `python3 -m zeitgeister transfer --from Claude --to Grok --input-clipboard --key local-state/claude-to-grok.key --output-dir generated-capsules --copy-prompt` |
+| Grok to Kimi | `python3 -m zeitgeister sender-prompt --from Grok --to Kimi --copy` | `python3 -m zeitgeister transfer --from Grok --to Kimi --input-clipboard --key local-state/grok-to-kimi.key --output-dir generated-capsules --copy-prompt` |
 | Grok to Qwen | `python3 -m zeitgeister sender-prompt --from Grok --to Qwen --copy` | `python3 -m zeitgeister transfer --from Grok --to Qwen --input-clipboard --key local-state/grok-to-qwen.key --output-dir generated-capsules --copy-prompt` |
 | Qwen to Kimi | `python3 -m zeitgeister sender-prompt --from Qwen --to Kimi --copy` | `python3 -m zeitgeister transfer --from Qwen --to Kimi --input-clipboard --key local-state/qwen-to-kimi.key --output-dir generated-capsules --copy-prompt` |
 | Kimi to GPT | `python3 -m zeitgeister sender-prompt --from Kimi --to GPT --copy` | `python3 -m zeitgeister transfer --from Kimi --to GPT --input-clipboard --key local-state/kimi-to-gpt.key --output-dir generated-capsules --copy-prompt` |

@@ -116,6 +116,21 @@ Zeitgeister copies the sender instruction and pauses. Follow the numbered Termin
 
 Use `--force` only when you intentionally want to replace an existing generated GPT-to-Qwen bundle.
 
+The sender and receiver names are ordinary labels. Use this generic shape:
+
+```sh
+python3 -m zeitgeister guided-transfer --from "SENDER" --to "RECEIVER" --key local-state/sender-to-receiver.key
+```
+
+Two browser-to-browser combinations were exercised successfully during the project walkthrough:
+
+| Transfer | Exact command |
+| --- | --- |
+| GPT to Qwen | `python3 -m zeitgeister guided-transfer --from GPT --to Qwen --key local-state/gpt-to-qwen.key` |
+| Grok to Kimi | `python3 -m zeitgeister guided-transfer --from Grok --to Kimi --key local-state/grok-to-kimi.key` |
+
+This confirms the user-controlled workflow for those sessions; it is not a claim that provider interfaces will never change.
+
 ## Manual GPT-to-Kimi clipboard workflow
 
 On macOS, Terminal can move the text through the clipboard without interactive multiline input.

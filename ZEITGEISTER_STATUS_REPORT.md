@@ -64,6 +64,7 @@ The Codex product returned Feedback ID `019f811f-ebab-70a1-808f-bd37b1c2dea7` fr
 - Model-neutral sender/receiver labels support GPT/ChatGPT, Gemini, Claude, Grok, Qwen, Kimi, local models, and other text-capable agents without provider dependencies.
 - Direct local bridging accepts bare JSON, fenced JSON, or one complete handoff object surrounded by explanatory model text and common invisible clipboard characters; it refuses multiple distinct objects as ambiguous.
 - Clipboard-safe macOS transfer avoids interactive shell pasting; file-based fallback remains portable.
+- The guided browser workflow was successfully exercised from GPT to Qwen and from Grok to Kimi on 2026-07-21.
 - Transfer bundles include a manifest, verification report, receiver prompt, human summary, and physically supplied hashed artifacts.
 - Structured claims record confirmed, unconfirmed, inferred, or disputed status with source references.
 - `resume --format prompt` and `resume --format json`.
