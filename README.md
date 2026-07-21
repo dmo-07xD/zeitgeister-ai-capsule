@@ -104,7 +104,19 @@ Before doing substantive work, briefly state the preserved goal,
 confirmed decisions, unresolved claims, missing artifacts, and first action.
 ```
 
-## GPT-to-Kimi in four copy-and-paste steps
+## Simplest guided transfer
+
+On macOS, one command walks through the whole browser-to-browser handoff:
+
+```sh
+python3 -m zeitgeister guided-transfer --from GPT --to Qwen --key local-state/gpt-to-qwen.key
+```
+
+Zeitgeister copies the sender instruction and pauses. Follow the numbered Terminal directions: paste into GPT, copy GPT's completed response, return to Terminal, and press Return. Zeitgeister then finds the handoff object, validates and authenticates it, builds the transfer bundle, and copies the verified Qwen prompt. Paste once more into Qwen.
+
+Use `--force` only when you intentionally want to replace an existing generated GPT-to-Qwen bundle.
+
+## Manual GPT-to-Kimi clipboard workflow
 
 On macOS, Terminal can move the text through the clipboard without interactive multiline input.
 
@@ -122,6 +134,8 @@ On macOS, Terminal can move the text through the clipboard without interactive m
    python3 -m zeitgeister transfer --from GPT --to Kimi --input-clipboard --key local-state/gpt-to-kimi.key --output-dir generated-capsules --copy-prompt
    ```
 
+   The clipboard reader automatically finds one complete Zeitgeister object inside common invisible markers, a Markdown code fence, or brief model prose. If the clipboard still contains the Terminal confirmation or sender template, the error names that exact mistake and tells you what to copy next.
+
 4. Paste into Kimi and send.
 
 Replace the sender and receiver labels to use Gemini, Claude, Grok, Qwen, Kimi, GPT, a local model, or another text-capable agent. The file-based cross-platform workflow, reverse handoffs, strict mode, and attachment handling are documented in [INTER_AGENT_GUIDE.md](INTER_AGENT_GUIDE.md).
@@ -130,6 +144,7 @@ Replace the sender and receiver labels to use Gemini, Claude, Grok, Qwen, Kimi, 
 
 | Command | Purpose |
 | --- | --- |
+| `guided-transfer --from GPT --to Qwen --key KEY` | Guide the complete interactive clipboard transfer with one Terminal command. |
 | `sender-prompt --from GPT --to Kimi [--copy]` | Produce the schema-constrained instruction for the sender. |
 | `transfer --from GPT --to Kimi --input INPUT --key KEY` | Validate, authenticate, verify, and build a self-describing transfer bundle. |
 | `receiver-prompt CAPSULE --key KEY --to Kimi` | Re-verify a capsule before rendering or copying its receiver prompt. |
@@ -181,7 +196,7 @@ python3 -m zeitgeister --help
 python3 -m zeitgeister transfer --help
 ```
 
-The suite contains 42 unit and integration tests covering canonical serialization, key permissions, normal verification, malformed and fenced AI input, structured claims, artifact validation and hashing, dry runs, strict failures, Git-ignore protection, clipboard transfer, tampering, missing and wrong keys, guarded updates, prompt rendering, transfer manifests, overwrite protection, lineage, and every CLI command.
+The suite contains 42 unit and integration tests covering canonical serialization, key permissions, normal verification, malformed, fenced, prose-wrapped, and invisible-character AI input, ambiguous-object refusal, structured claims, artifact validation and hashing, dry runs, strict failures, Git-ignore protection, clipboard transfer, tampering, missing and wrong keys, guarded updates, prompt rendering, transfer manifests, overwrite protection, lineage, and every CLI command.
 
 ## Limitations
 

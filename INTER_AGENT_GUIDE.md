@@ -4,7 +4,17 @@ Zeitgeister moves deliberate project context between AI chats without requiring 
 
 The sender writes proposed handoff content. The user-controlled local CLI validates and authenticates it. The receiver gets a verified continuation prompt, never the signing key.
 
-## Exact GPT to Kimi workflow on macOS
+## Recommended: one-command guided transfer
+
+On macOS, run:
+
+```sh
+python3 -m zeitgeister guided-transfer --from GPT --to Qwen --key local-state/gpt-to-qwen.key
+```
+
+The CLI copies the GPT instruction, displays four numbered steps, and waits. Paste into GPT, copy its completed response, return to the same Terminal, and press Return. Zeitgeister then validates and verifies the capsule and replaces the clipboard with the Qwen prompt. The longer workflow below remains useful when you want to see each independent command.
+
+## Exact manual GPT to Kimi workflow on macOS
 
 Run the following from the cloned Zeitgeister repository. Every Terminal command below is one line; do not copy the explanatory text into Terminal.
 
@@ -16,13 +26,13 @@ Paste this one line into Terminal and press Return:
 python3 -m zeitgeister sender-prompt --from GPT --to Kimi --copy
 ```
 
-Terminal should say: `Sender instruction copied. Paste it into GPT.`
+Terminal now prints four explicit lines beginning with `COPIED:` and `NEXT:`. Follow the `NEXT:` instruction. Do not select or copy the Terminal confirmation; the full sender instruction is already in the clipboard.
 
 ### Step 2 — GPT produces the handoff content
 
 Open the GPT conversation you want to continue. Press Command-V in the GPT message box and send the pasted instruction.
 
-GPT should return one JSON object. Copy GPT's complete response. A single `json` code block, or one code block with brief surrounding prose, is accepted.
+GPT should return one JSON object. Copy GPT's complete response. Zeitgeister locates one complete handoff object in clean JSON, a `json` code block, or ordinary model prose. It also ignores common byte-order marks, zero-width characters, and clipboard boundary noise. Two different complete handoff objects remain an error because choosing between them would be unsafe.
 
 Do not ask GPT to sign or verify anything. Browser GPT normally cannot access the local repository or ignored signing key, and it does not need to.
 
@@ -112,6 +122,18 @@ python3 -m zeitgeister transfer --from GPT --to Kimi --input generated-capsules/
 ```
 
 Paste the complete contents of `generated-capsules/gpt-to-kimi/receiver-prompt.txt` into Kimi. This avoids interactive standard input and the shell continuation prompt that can appear after an incomplete multiline paste.
+
+## Clipboard recovery messages
+
+The CLI now distinguishes the most common mistakes:
+
+- **Terminal confirmation copied:** rerun `sender-prompt --copy`, then press Command-V in the sender chat without copying the Terminal message.
+- **Sender template still copied:** send that template to the sender AI, wait for its completed response, then copy the response.
+- **One recoverable JSON object inside prose or invisible characters:** Zeitgeister extracts and validates it automatically.
+- **Two different complete objects:** copy only the handoff you intend to transfer.
+- **Malformed or incomplete JSON:** the error explains that the copy must run from the opening `{` through its matching `}` and preserves the decoder detail.
+
+No manual `pbpaste`, `head`, or Unicode-cleanup command should be necessary.
 
 ## Returning work
 

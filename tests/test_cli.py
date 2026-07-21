@@ -110,18 +110,36 @@ class CliTests(unittest.TestCase):
         self.assertEqual(self.invoke(["--key", str(self.key), "verify", str(capsule)])[0], 0)
 
     def test_28_handoff_accepts_json_code_fences(self):
-        fenced = self.root / "fenced.txt"
-        fenced.write_text(
-            "I cannot access your local key, but here is the requested JSON:\n\n```json\n"
-            + self.input.read_text(encoding="utf-8")
+        sender_json = self.input.read_text(encoding="utf-8")
+        variants = {
+            "fenced": "I cannot access your local key, but here is the requested JSON:\n\n```json\n"
+            + sender_json
             + "\n```\n\nSave this content locally.\n",
+            "clipboard-noise": "\ufeff\u200bExported response:\x00\n" + sender_json + "\nEnd of response.",
+            "plain-prose": "Here is the handoff you requested:\n" + sender_json + "\nYou can save it now.",
+        }
+        for name, response in variants.items():
+            with self.subTest(name=name):
+                source = self.root / f"{name}.txt"
+                source.write_text(response, encoding="utf-8")
+                code, _, _ = self.invoke([
+                    "handoff", "--from", "Gemini", "--to", "Grok", "--input", str(source),
+                    "--key", str(self.key), "--output-dir", str(self.root / f"{name}-output"),
+                ])
+                self.assertEqual(code, 0)
+        other = json.loads(sender_json)
+        other["project_goal"] = "A different handoff"
+        ambiguous = self.root / "ambiguous.txt"
+        ambiguous.write_text(
+            "```json\n" + sender_json + "\n```\n```json\n" + json.dumps(other) + "\n```\n",
             encoding="utf-8",
         )
-        code, _, _ = self.invoke([
-            "handoff", "--from", "Gemini", "--to", "Grok", "--input", str(fenced),
-            "--key", str(self.key), "--output-dir", str(self.root / "fenced-output"),
+        code, _, err = self.invoke([
+            "handoff", "--from", "Gemini", "--to", "Grok", "--input", str(ambiguous),
+            "--key", str(self.key), "--output-dir", str(self.root / "ambiguous-output"),
         ])
-        self.assertEqual(code, 0)
+        self.assertEqual(code, 2)
+        self.assertIn("Multiple complete", err)
 
     def test_29_handoff_rejects_object_blocker_before_key_creation(self):
         bad = json.loads(self.input.read_text(encoding="utf-8"))
@@ -251,15 +269,39 @@ class CliTests(unittest.TestCase):
                 "--key", str(self.key), "--output-dir", str(self.root / "generated"), "--copy-prompt",
             ])
         self.assertEqual(code, 0)
-        self.assertIn("prompt is copied", out)
+        self.assertIn("verified receiver prompt is now in your clipboard", out)
         self.assertEqual(len(copied), 1)
         self.assertIn("# Zeitgeister handoff", copied[0])
+        with patch(
+            "zeitgeister.cli._clipboard_read",
+            return_value="Sender instruction copied. Paste it into GPT.",
+        ):
+            code, _, err = self.invoke([
+                "transfer", "--from", "GPT", "--to", "Qwen", "--input-clipboard",
+                "--key", str(self.root / "unused.key"), "--output-dir", str(self.root / "unused"),
+            ])
+        self.assertEqual(code, 2)
+        self.assertIn("Terminal confirmation", err)
+        guided_copies: list[str] = []
+        with patch("zeitgeister.cli._clipboard_read", return_value=sender_json), patch(
+            "zeitgeister.cli._clipboard_write", side_effect=lambda value: guided_copies.append(value)
+        ), patch("builtins.input", return_value=""):
+            code, out, _ = self.invoke([
+                "guided-transfer", "--from", "GPT", "--to", "Qwen",
+                "--key", str(self.root / "guided.key"),
+                "--output-dir", str(self.root / "guided-output"),
+            ])
+        self.assertEqual(code, 0)
+        self.assertIn("Switch to GPT", out)
+        self.assertEqual(len(guided_copies), 2)
+        self.assertIn("Prepare a Zeitgeister handoff", guided_copies[0])
+        self.assertIn("# Zeitgeister handoff", guided_copies[1])
 
     def test_42_sender_prompt_can_copy_exact_instruction(self):
         copied: list[str] = []
         with patch("zeitgeister.cli._clipboard_write", side_effect=lambda value: copied.append(value)):
             code, out, _ = self.invoke(["sender-prompt", "--from", "GPT", "--to", "Kimi", "--copy"])
         self.assertEqual(code, 0)
-        self.assertIn("Paste it into GPT", out)
+        self.assertIn("DO NOT copy this Terminal message", out)
         self.assertEqual(len(copied), 1)
         self.assertIn('"handoff_to": "Kimi"', copied[0])

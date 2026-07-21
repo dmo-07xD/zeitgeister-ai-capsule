@@ -14,27 +14,78 @@ from typing import Any
 from .core import CapsuleError, atomic_write_bytes, atomic_write_text, create_capsule, load_existing_key, load_or_create_key, normalize_input_content, read_capsule, resume_prompt, update_capsule, validate_capsule, verify_capsule, verify_lineage, write_capsule
 
 
-def _strip_json_fence(value: str) -> str:
-    stripped = value.strip()
-    fenced = re.findall(r"```(?:json)?[ \t]*\r?\n(.*?)\r?\n```", stripped, flags=re.IGNORECASE | re.DOTALL)
-    if len(fenced) == 1:
-        return fenced[0].strip()
-    if len(fenced) > 1:
-        raise CapsuleError("Sender response contains multiple fenced blocks; provide exactly one JSON object.")
-    return stripped
+_IGNORABLE_BOUNDARY_CHARACTERS = " \t\r\n\ufeff\u200b\u200c\u200d\u2060"
+_HANDOFF_HINT_FIELDS = {"project_goal", "project_ethos", "provenance"}
 
 
 def _reject_constant(value: str) -> Any:
     raise CapsuleError(f"Non-standard JSON value '{value}' is not allowed.")
 
 
-def _data_text(raw: str, label: str) -> dict[str, Any]:
+def _clean_json_boundary(value: str) -> str:
+    return value.strip(_IGNORABLE_BOUNDARY_CHARACTERS)
+
+
+def _decode_json_object(raw: str, label: str) -> dict[str, Any]:
+    """Find one handoff object in clean JSON, a code fence, or ordinary model prose."""
+    if "Sender instruction copied. Paste it into" in raw:
+        raise CapsuleError(
+            "The clipboard contains the Terminal confirmation, not the sender AI's JSON. "
+            "Run sender-prompt --copy again, paste into the sender chat without copying Terminal output, "
+            "then copy the AI's completed JSON response."
+        )
+    if "Prepare a Zeitgeister handoff from" in raw and '"project_goal"' in raw:
+        raise CapsuleError(
+            "The clipboard still contains the sender instruction template. Paste it into the sender chat, "
+            "send it, then copy the AI's completed JSON response."
+        )
+    cleaned = _clean_json_boundary(raw)
+    decoder = json.JSONDecoder(parse_constant=_reject_constant)
+    direct_error: json.JSONDecodeError | None = None
     try:
-        value = json.loads(_strip_json_fence(raw), parse_constant=_reject_constant)
+        value = decoder.decode(cleaned)
     except json.JSONDecodeError as exc:
-        raise CapsuleError(f"Invalid input JSON in {label}: line {exc.lineno}, column {exc.colno}.") from exc
-    if not isinstance(value, dict):
-        raise CapsuleError("Create input must be a JSON object.")
+        direct_error = exc
+    else:
+        if not isinstance(value, dict):
+            raise CapsuleError(f"The JSON in {label} is a {type(value).__name__}; a handoff must be one JSON object.")
+        return value
+
+    candidates: list[dict[str, Any]] = []
+    fenced_blocks = re.findall(
+        r"```(?:json)?[^\r\n]*\r?\n(.*?)\r?\n```", cleaned, flags=re.IGNORECASE | re.DOTALL
+    )
+    search_texts = [_clean_json_boundary(block) for block in fenced_blocks]
+    search_texts.append(cleaned)
+    for search_text in search_texts:
+        for match in re.finditer(r"\{", search_text):
+            try:
+                candidate, _ = decoder.raw_decode(search_text, match.start())
+            except json.JSONDecodeError:
+                continue
+            if isinstance(candidate, dict) and _HANDOFF_HINT_FIELDS.issubset(candidate):
+                candidates.append(candidate)
+                break
+    unique: dict[str, dict[str, Any]] = {}
+    for candidate in candidates:
+        fingerprint = json.dumps(candidate, sort_keys=True, ensure_ascii=False, allow_nan=False)
+        unique[fingerprint] = candidate
+    if len(unique) == 1:
+        return next(iter(unique.values()))
+    if len(unique) > 1:
+        raise CapsuleError(
+            f"Multiple complete Zeitgeister JSON objects were found in {label}. Copy only the one response to transfer."
+        )
+    assert direct_error is not None
+    raise CapsuleError(
+        f"Could not find one complete Zeitgeister JSON object in {label}. "
+        "Copy the entire sender response from its opening '{' through its matching '}'. "
+        f"Parser detail: {direct_error.msg} at line {direct_error.lineno}, column {direct_error.colno}."
+    ) from direct_error
+
+
+def _data_text(raw: str, label: str) -> dict[str, Any]:
+    value = _decode_json_object(raw, label)
     return normalize_input_content(value)
 
 
@@ -281,6 +332,14 @@ def parser() -> argparse.ArgumentParser:
     sender_prompt.add_argument("--to", dest="receiver", required=True, help="Receiver AI name.")
     sender_prompt.add_argument("--output", help="Atomically write the instruction to this file instead of stdout.")
     sender_prompt.add_argument("--copy", action="store_true", help="Copy the instruction to the macOS clipboard.")
+    guided = sub.add_parser("guided-transfer", help="Guide a complete clipboard handoff from sender to receiver.")
+    guided.add_argument("--from", dest="sender", required=True, help="Sender AI or human label.")
+    guided.add_argument("--to", dest="receiver", required=True, help="Receiver AI or human label.")
+    guided.add_argument("--key", dest="guided_key", required=True, help="Ignored local key path. Created only if absent.")
+    guided.add_argument("--output-dir", default="generated-capsules", help="Parent of the transfer bundle directory.")
+    guided.add_argument("--artifact", action="append", default=[], help="Physically include this file; may be repeated.")
+    guided.add_argument("--strict", action="store_true", help="Fail on missing artifacts and unconfirmed or unsourced claims.")
+    guided.add_argument("--force", action="store_true", help="Replace an existing same-name generated bundle.")
     handoff = sub.add_parser("handoff", help="Create, verify, and export a complete inter-agent handoff in one command.")
     handoff.add_argument("--from", dest="sender", required=True, help="Sender AI name used in output filenames.")
     handoff.add_argument("--to", dest="receiver", required=True, help="Receiver AI name used in the prompt and filenames.")
@@ -360,9 +419,41 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"Sender instruction written atomically: {args.output}")
             if args.copy:
                 _clipboard_write(rendered)
-                print(f"Sender instruction copied. Paste it into {args.sender}.")
+                print("COPIED: the full sender instruction is now in your clipboard.")
+                print(f"NEXT: switch to {args.sender}, press Command-V, and send the pasted instruction.")
+                print("DO NOT copy this Terminal message. After the AI responds, copy its complete JSON response.")
+                print(f"The pasted instruction begins: Prepare a Zeitgeister handoff from {args.sender} to {args.receiver}")
             elif not args.output:
                 print(rendered, end="")
+        elif args.command == "guided-transfer":
+            rendered = _sender_prompt(args.sender, args.receiver)
+            _clipboard_write(rendered)
+            print("COPIED: the sender instruction is now in your clipboard.")
+            print(f"1. Switch to {args.sender} and open the conversation you want to transfer.")
+            print("2. Press Command-V, send the instruction, and wait for the complete response.")
+            print("3. Copy the AI's complete JSON response.")
+            try:
+                input("4. Return to this Terminal and press Return to continue: ")
+            except EOFError as exc:
+                raise CapsuleError(
+                    "Guided transfer needs an interactive Terminal. Use transfer --input FILE for automation."
+                ) from exc
+            transfer_args = [
+                "transfer",
+                "--from", args.sender,
+                "--to", args.receiver,
+                "--input-clipboard",
+                "--key", args.guided_key,
+                "--output-dir", args.output_dir,
+                "--copy-prompt",
+            ]
+            for artifact in args.artifact:
+                transfer_args.extend(["--artifact", artifact])
+            if args.strict:
+                transfer_args.append("--strict")
+            if args.force:
+                transfer_args.append("--force")
+            return main(transfer_args)
         elif args.command == "handoff":
             content = _data(args.input)
             sender_slug = _agent_slug(args.sender)
@@ -391,6 +482,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "transfer":
             raw = _clipboard_read() if args.input_clipboard else None
             content = _data_text(raw, "the clipboard") if raw is not None else _data(args.input)
+            if args.input_clipboard:
+                print("Clipboard response recognized: one complete Zeitgeister JSON object found and validated.")
             content = dict(content)
             content["provenance"] = dict(content["provenance"])
             content["provenance"]["zeitgeister_transfer"] = {
@@ -506,7 +599,9 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"Warning: {exc}", file=sys.stderr)
             print(message)
             if copied:
-                print(f"Transfer ready. The verified prompt is copied; paste it into {args.receiver}.")
+                print("COPIED: the verified receiver prompt is now in your clipboard.")
+                print(f"NEXT: switch to {args.receiver}, press Command-V, confirm it begins '# Zeitgeister handoff', and send.")
+                print("DO NOT copy this Terminal message; the receiver prompt is already copied.")
             else:
                 print(f"Transfer ready. Paste this file into {args.receiver}:")
                 print(prompt_path.resolve())
