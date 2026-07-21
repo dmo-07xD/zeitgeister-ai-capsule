@@ -51,7 +51,7 @@ The guided program displays the underlying CLI commands with the temporary signi
 
 ### 2:30–2:45 — Close and disclose Codex/GPT-5.6 use
 
-“Zeitgeister AI Capsule was built in Codex with GPT-5.6. Codex accelerated the architecture, canonical signing boundary, CLI implementation, threat-model wording, schema, demo, documentation, and eighteen tests. GPT-5.6 was the build-time reasoning model, not a runtime dependency. Zeitgeister keeps AI-agent continuity portable, explicit, and honestly scoped.”
+“Zeitgeister AI Capsule was built in Codex with GPT-5.6. Codex accelerated the architecture, canonical signing boundary, CLI implementation, threat-model wording, schema, demo, documentation, and thirty tests. GPT-5.6 was the build-time reasoning model, not a runtime dependency. Zeitgeister keeps AI-agent continuity portable, explicit, and honestly scoped.”
 
 ## Recording checklist
 

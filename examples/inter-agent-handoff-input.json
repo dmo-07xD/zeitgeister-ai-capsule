@@ -1,0 +1,29 @@
+{
+  "project_goal": "Continue a research task from one AI chat to another without losing verified context.",
+  "project_ethos": "Preserve evidence, uncertainty, provenance, and the user's intent across agent boundaries.",
+  "constraints": [
+    "Do not invent missing facts or sources.",
+    "Keep external claims unconfirmed until supporting evidence is recorded.",
+    "Do not place credentials, signing keys, or sensitive personal data in the handoff."
+  ],
+  "decisions": [
+    {
+      "decision": "Use Zeitgeister as a user-controlled local broker between model providers.",
+      "rationale": "Ordinary browser-based AI chats cannot access the same local filesystem or private signing key."
+    }
+  ],
+  "blockers": [
+    "Unconfirmed: the receiver has not yet reviewed this handoff."
+  ],
+  "next_steps": [
+    "Paste the verified receiver prompt into the destination AI chat.",
+    "Review the receiver's response before recording any new decision as confirmed."
+  ],
+  "provenance": {
+    "handoff_from": "Example Sender",
+    "handoff_to": "Example Receiver",
+    "sources": [],
+    "missing_artifacts": [],
+    "status_policy": "Authentication protects the local handoff from undetected edits; it does not prove external claims."
+  }
+}

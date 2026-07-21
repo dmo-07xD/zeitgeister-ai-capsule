@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zeitgeister.core import CapsuleError, canonical_json, create_capsule, load_or_create_key, read_capsule, resume_prompt, update_capsule, validate_capsule, verify_capsule, verify_lineage, write_capsule
+from zeitgeister.core import CapsuleError, canonical_json, create_capsule, load_existing_key, load_or_create_key, normalize_input_content, read_capsule, resume_prompt, update_capsule, validate_capsule, verify_capsule, verify_lineage, write_capsule
 
 
 def content():
@@ -95,3 +95,28 @@ class CoreTests(unittest.TestCase):
         self.capsule["next_steps"].append("malicious")
         with self.assertRaisesRegex(CapsuleError, "Refusing update"):
             update_capsule(self.capsule, self.key, {"next_steps": [], "blockers": [], "decisions": []})
+
+    def test_19_string_lists_reject_agent_objects(self):
+        bad = content()
+        bad["blockers"] = [{"description": "waiting", "status": "unconfirmed"}]
+        with self.assertRaisesRegex(CapsuleError, "blockers\[0\].*non-empty string"):
+            create_capsule(bad, self.key)
+
+    def test_20_sender_input_rejects_unexpected_fields(self):
+        bad = content()
+        bad["goal"] = bad["project_goal"]
+        with self.assertRaisesRegex(CapsuleError, "Unexpected input field.*goal"):
+            normalize_input_content(bad)
+
+    def test_21_existing_key_loader_never_creates(self):
+        missing = self.root / "missing.key"
+        with self.assertRaisesRegex(CapsuleError, "never create keys"):
+            load_existing_key(missing)
+        self.assertFalse(missing.exists())
+
+    def test_22_resume_prompt_includes_provenance_and_receiver_action(self):
+        prompt = resume_prompt(self.capsule, receiver="Qwen")
+        self.assertIn("## Sources and provenance", prompt)
+        self.assertIn('"source": "unit test"', prompt)
+        self.assertIn("Qwen: continue from this handoff", prompt)
+        self.assertIn("cannot independently authenticate", prompt)

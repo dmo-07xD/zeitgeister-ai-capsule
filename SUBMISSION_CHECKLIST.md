@@ -5,10 +5,11 @@
 - [x] GitHub repository is public and accessible: https://github.com/dmo-07xD/zeitgeister-ai-capsule
 - [x] `main` is published and tracks `origin/main`.
 - [x] README contains setup, testing, trust-model, Codex, and GPT-5.6 documentation.
+- [x] Inter-agent guide documents GPT, Gemini, Claude, Grok, Qwen, Kimi, local-model, and generic-agent transfers.
 - [x] Non-sensitive sample input is included at `examples/dataset-handoff-input.json`.
 - [x] MIT license is included.
 - [x] Local signing keys, credentials, generated capsules, local state, and temporary files are ignored.
-- [x] Automated test suite passes 18 tests.
+- [x] Automated test suite passes 30 tests.
 - [x] Guided demonstration completes the full workflow.
 
 ## Devpost
@@ -18,7 +19,7 @@
 - [ ] Demo is uploaded to YouTube as a public video.
 - [ ] Public video link works in a private browser window.
 - [ ] Devpost project-description fields are filled and reviewed.
-- [ ] Actual `/feedback` Session ID from the primary Codex build task is entered.
+- [x] Actual `/feedback` Session ID from the primary Codex build task is saved in `CODEX_SESSION_ID.txt`.
 - [x] Track selected: Developer Tools.
 - [ ] Submission status is **NOT DRAFT**.
 
@@ -35,4 +36,4 @@
 - Demo recording is the human entrant’s responsibility.
 - Video upload and final Devpost form submission are the human entrant’s responsibility.
 - Codex cannot record the human’s voiceover or perform the final Devpost submission confirmation on the entrant’s behalf.
-- The `/feedback` Session ID remains unconfirmed until the Codex product returns it from the primary build task.
+- The Codex product returned Feedback ID `019f811f-ebab-70a1-808f-bd37b1c2dea7` from the primary build task; it is saved in `CODEX_SESSION_ID.txt`.

@@ -7,7 +7,7 @@ Project: Zeitgeister AI Capsule
 Track: Developer Tools
 Repository: https://github.com/dmo-07xD/zeitgeister-ai-capsule
 
-This report uses the confirmed current repository at `/Users/dmo/Documents/DevPost AI Project`. The task brief referenced an older `/mnt/agents/output/zeitgeister-capsule/` layout and legacy filenames; those are not treated as current facts. The current MVP is a Python 3.10+ standard-library package with six CLI commands and 18 passing tests.
+This report uses the confirmed current repository at `/Users/dmo/Documents/DevPost AI Project`. The task brief referenced an older `/mnt/agents/output/zeitgeister-capsule/` layout and legacy filenames; those are not treated as current facts. The current MVP is a Python 3.10+ standard-library package with eight CLI commands and 30 passing tests.
 
 ## Blocker 1 — GitHub repository visibility
 
@@ -25,11 +25,9 @@ Evidence:
 
 ## Blocker 2 — Codex `/feedback` Session ID
 
-**STILL BLOCKED — USER ACTION REQUIRED.**
+**RESOLVED.**
 
-This assistant cannot invoke the Codex product’s `/feedback` UI command or invent its returned identifier. No `CODEX_SESSION_ID.txt` was created because a placeholder could be mistaken for the real submission value.
-
-Required action: run `/feedback` in the primary Codex build task, copy the actual Session ID returned by Codex, and enter that exact value in Devpost. If the product shows only a generic feedback dialog and no Session ID, record that behavior as an explicit submission risk and follow the event’s official support guidance.
+The Codex product returned Feedback ID `019f811f-ebab-70a1-808f-bd37b1c2dea7` from the primary build task. The exact value is saved in `CODEX_SESSION_ID.txt`; no placeholder was used. It still needs to be entered into the Devpost form if that field has not yet been completed.
 
 ## Blocker 3 — demo video preparation
 
@@ -45,7 +43,7 @@ Required action: run `/feedback` in the primary Codex build task, copy the actua
 **RESOLVED AS A DRAFT; FORM ENTRY REMAINS UNCONFIRMED.**
 
 - `DEVPOST_SUBMISSION.md` contains the project name, pitch, description, Codex/GPT-5.6 account, track, repository URL, setup instructions, hardest-part reflection, and learning reflection.
-- Demo URL and `/feedback` Session ID remain explicitly unconfirmed and blank for real values.
+- The demo URL remains explicitly unconfirmed and blank for the real value. The confirmed `/feedback` Session ID is saved separately in `CODEX_SESSION_ID.txt`.
 - The text does not claim encryption, immutability, universal protocol status, or public authorship verification.
 
 ## Blocker 5 — final submission checklist
@@ -62,15 +60,17 @@ Required action: run `/feedback` in the primary Codex build task, copy the actua
 - SHA-256 content hashing.
 - HMAC-SHA256 local authentication.
 - Parent-hash lineage.
-- Commands: `create`, `validate`, `verify`, `resume`, `update`, `verify-lineage`.
+- Commands: `create`, `validate`, `verify`, `resume`, `update`, `verify-lineage`, `sender-prompt`, `handoff`.
+- Model-neutral sender/receiver labels support GPT/ChatGPT, Gemini, Claude, Grok, Qwen, Kimi, local models, and other text-capable agents without provider dependencies.
+- Direct local bridging accepts bare JSON, a single fenced JSON block, or a single fenced block surrounded by explanatory model text.
 - `resume --format prompt` and `resume --format json`.
 - Fictional, non-sensitive Political Economy country-quarter guided demo.
-- 18 automated unit/integration tests.
+- 30 automated unit/integration tests.
 - Honest trust model: local authentication and edit detection only; no encryption, immutability, or independent authorship proof.
 
 ## Immediate human sequence
 
-1. Run `/feedback` in the primary Codex build task and save the returned Session ID.
+1. Enter the confirmed Feedback ID from `CODEX_SESSION_ID.txt` in Devpost.
 2. Record the narrated demo using `DEMO_SCRIPT.md`.
 3. Upload it publicly to YouTube and test the URL while signed out.
 4. Paste the prepared copy from `DEVPOST_SUBMISSION.md` into Devpost.

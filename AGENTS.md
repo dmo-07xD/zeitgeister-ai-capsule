@@ -12,4 +12,6 @@ Verification commands:
 python3 -m unittest discover -s tests -v
 python3 demo.py --guided
 python3 -m zeitgeister --help
+python3 -m zeitgeister sender-prompt --help
+python3 -m zeitgeister handoff --help
 ```

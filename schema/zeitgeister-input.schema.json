@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Zeitgeister Sender Input",
+  "description": "The content-only JSON a sender AI returns before the local CLI creates and authenticates a capsule.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "project_goal",
+    "project_ethos",
+    "constraints",
+    "decisions",
+    "blockers",
+    "next_steps",
+    "provenance"
+  ],
+  "properties": {
+    "project_goal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_ethos": {
+      "type": "string",
+      "minLength": 1
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "decision",
+          "rationale"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "next_steps": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "provenance": {
+      "type": "object"
+    }
+  }
+}

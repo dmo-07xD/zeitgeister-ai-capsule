@@ -7,6 +7,7 @@ import json
 import os
 import secrets
 import stat
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -58,6 +59,21 @@ def load_or_create_key(path: str | Path | None = None) -> bytes:
     return key
 
 
+def load_existing_key(path: str | Path | None = None) -> bytes:
+    """Load a key for verification without ever creating a replacement."""
+    key_path = Path(path) if path else default_key_path()
+    try:
+        key = key_path.read_bytes()
+    except FileNotFoundError as exc:
+        raise CapsuleError(
+            f"Signing key not found: {key_path}. Verification and resume never create keys; "
+            "use the same local key that created the capsule."
+        ) from exc
+    if len(key) < 32:
+        raise CapsuleError(f"Signing key at {key_path} is too short; replace it with a fresh 32-byte key.")
+    return key
+
+
 def _payload(capsule: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in capsule.items() if key != "integrity"}
 
@@ -92,7 +108,26 @@ def normalize_content(content: dict[str, Any]) -> dict[str, Any]:
         else _raise("Each decision must be an object with non-empty 'decision' and 'rationale'.")
         for item in normalized["decisions"]
     ]
+    for name in ("constraints", "blockers", "next_steps"):
+        for index, item in enumerate(normalized[name]):
+            if not isinstance(item, str) or not item.strip():
+                raise CapsuleError(
+                    f"'{name}[{index}]' must be a non-empty string; received {type(item).__name__}."
+                )
     return normalized
+
+
+def normalize_input_content(content: dict[str, Any]) -> dict[str, Any]:
+    """Validate the content-only document accepted by create and handoff."""
+    normalized = normalize_content(content)
+    unexpected = sorted(set(content) - set(REQUIRED_CONTENT))
+    if unexpected:
+        rendered = ", ".join(unexpected)
+        raise CapsuleError(
+            f"Unexpected input field(s): {rendered}. Create input accepts only "
+            f"{', '.join(REQUIRED_CONTENT)}; move source metadata under 'provenance'."
+        )
+    return {name: normalized[name] for name in REQUIRED_CONTENT}
 
 
 def _raise(message: str) -> Any:
@@ -180,10 +215,33 @@ def read_capsule(path: str | Path) -> dict[str, Any]:
         raise CapsuleError(f"Invalid JSON in {path}: line {exc.lineno}, column {exc.colno}.") from exc
 
 
-def write_capsule(path: str | Path, capsule: dict[str, Any]) -> None:
+def atomic_write_bytes(path: str | Path, value: bytes) -> None:
+    """Replace a file only after its complete contents are safely staged."""
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_bytes(canonical_json(capsule) + b"\n")
+    temporary_name: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=f".{destination.name}.", delete=False) as handle:
+            temporary_name = handle.name
+            handle.write(value)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_name, destination)
+    except Exception:
+        if temporary_name:
+            try:
+                Path(temporary_name).unlink()
+            except FileNotFoundError:
+                pass
+        raise
+
+
+def atomic_write_text(path: str | Path, value: str) -> None:
+    atomic_write_bytes(path, value.encode("utf-8"))
+
+
+def write_capsule(path: str | Path, capsule: dict[str, Any]) -> None:
+    atomic_write_bytes(path, canonical_json(capsule) + b"\n")
 
 
 def update_capsule(existing: dict[str, Any], key: bytes, additions: dict[str, list[Any]]) -> dict[str, Any]:
@@ -196,17 +254,50 @@ def update_capsule(existing: dict[str, Any], key: bytes, additions: dict[str, li
     return create_capsule(content, key, parent_hash=existing["integrity"]["content_hash"], created_at=existing["timestamps"]["created_at"])
 
 
-def resume_prompt(capsule: dict[str, Any]) -> str:
+def _bullets(values: list[str], empty: str) -> str:
+    return "\n".join(f"- {value}" for value in values) if values else f"- {empty}"
+
+
+def resume_prompt(capsule: dict[str, Any], receiver: str | None = None) -> str:
+    receiver_label = receiver.strip() if receiver and receiver.strip() else "Receiving AI"
+    decisions = "\n".join(
+        f"- **{item['decision']}**\n  Rationale: {item['rationale']}" for item in capsule["decisions"]
+    ) or "- None recorded."
+    provenance = json.dumps(capsule["provenance"], indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False)
     return "\n".join([
-        "# Zeitgeister AI Capsule — resume brief",
-        f"Goal: {capsule['project_goal']}",
-        f"Ethos: {capsule['project_ethos']}",
-        "Constraints: " + "; ".join(capsule["constraints"]) if capsule["constraints"] else "Constraints: none recorded.",
-        "Decisions: " + "; ".join(f"{d['decision']} (because {d['rationale']})" for d in capsule["decisions"]) if capsule["decisions"] else "Decisions: none recorded.",
-        "Blockers: " + "; ".join(capsule["blockers"]) if capsule["blockers"] else "Blockers: none recorded.",
-        "Next steps: " + "; ".join(capsule["next_steps"]) if capsule["next_steps"] else "Next steps: none recorded.",
-        "Trust note: Verify this capsule with the local signing key before acting. It is locally authenticated, not encrypted or independently authored/immutable.",
-    ])
+        "# Zeitgeister handoff",
+        "",
+        "## Goal",
+        capsule["project_goal"],
+        "",
+        "## Ethos",
+        capsule["project_ethos"],
+        "",
+        "## Constraints",
+        _bullets(capsule["constraints"], "None recorded."),
+        "",
+        "## Recorded decisions",
+        decisions,
+        "",
+        "## Blockers and unconfirmed items",
+        _bullets(capsule["blockers"], "None recorded."),
+        "",
+        "## Next steps",
+        "\n".join(f"{index}. {value}" for index, value in enumerate(capsule["next_steps"], 1)) or "1. None recorded.",
+        "",
+        "## Sources and provenance",
+        "```json",
+        provenance,
+        "```",
+        "",
+        "## Action requested",
+        f"{receiver_label}: continue from this handoff. Preserve the goal, ethos, recorded decisions, uncertainties, and sources. Begin with the listed next steps, and do not invent missing facts or artifacts.",
+        "",
+        "## Trust scope",
+        "This prompt was exported only after local SHA-256 and HMAC-SHA256 verification by the user-controlled Zeitgeister CLI.",
+        "A receiving AI without the local key cannot independently authenticate it.",
+        "It is locally authenticated, not encrypted, immutable, or independently authored. Authentication detects changes and proves possession of the shared local key; it does not establish that external claims are factually true.",
+    ]) + "\n"
 
 
 def verify_lineage(capsules: list[dict[str, Any]], key: bytes) -> tuple[bool, str]:
