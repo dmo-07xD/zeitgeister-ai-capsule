@@ -1,119 +1,122 @@
 # Zeitgeister inter-agent guide
 
-Zeitgeister is model-neutral. It can broker a handoff between GPT/ChatGPT, Gemini, Claude, Grok, Qwen, Kimi, another AI chat, or a human collaborator. No provider plugin, API key, model SDK, or Codex session is required.
+Zeitgeister moves deliberate project context between AI chats without requiring a provider API, SDK, plugin, or Codex intermediary. GPT/ChatGPT, Kimi, Gemini, Claude, Grok, Qwen, Copilot, Perplexity, local models, future text-capable agents, and human collaborators are all handled as labels. The protocol does not depend on a provider-specific feature.
 
-The local CLI is the broker:
+The sender writes proposed handoff content. The user-controlled local CLI validates and authenticates it. The receiver gets a verified continuation prompt, never the signing key.
 
-1. The sender AI proposes structured JSON.
-2. Zeitgeister validates, authenticates, verifies, and exports it on your computer.
-3. The receiver AI gets the generated prompt, never the signing key.
+## Exact GPT to Kimi workflow on macOS
 
-Ordinary browser chats cannot access your local repository or ignored key. Do not ask them to create or verify a capsule; use `sender-prompt` to ask only for the content they can actually provide.
+Run the following from the cloned Zeitgeister repository. Every Terminal command below is one line; do not copy the explanatory text into Terminal.
 
-## Universal three-step workflow
+### Step 1 — Terminal copies the sender instruction
 
-Run commands from the Zeitgeister repository.
-
-### 1. Generate the sender instruction
-
-Replace the names with any sender and receiver:
+Paste this one line into Terminal and press Return:
 
 ```sh
-python3 -m zeitgeister sender-prompt --from GPT --to Qwen
+python3 -m zeitgeister sender-prompt --from GPT --to Kimi --copy
 ```
 
-Paste the printed instruction into the sender chat. The instruction requires the current content-only schema, tells the sender to label uncertainty, and prevents it from falsely claiming local execution or verification.
+Terminal should say: `Sender instruction copied. Paste it into GPT.`
 
-### 2. Create the verified handoff locally
+### Step 2 — GPT produces the handoff content
 
-The shortest route does not require saving the sender response first:
+Open the GPT conversation you want to continue. Press Command-V in the GPT message box and send the pasted instruction.
+
+GPT should return one JSON object. Copy GPT's complete response. A single `json` code block, or one code block with brief surrounding prose, is accepted.
+
+Do not ask GPT to sign or verify anything. Browser GPT normally cannot access the local repository or ignored signing key, and it does not need to.
+
+### Step 3 — Terminal creates, verifies, and copies the Kimi prompt
+
+With GPT's response still copied, paste this one line into Terminal and press Return:
 
 ```sh
-python3 -m zeitgeister handoff \
-  --from GPT \
-  --to Qwen \
-  --input - \
-  --key local-state/gpt-to-qwen.key \
-  --output-dir generated-capsules
+python3 -m zeitgeister transfer --from GPT --to Kimi --input-clipboard --key local-state/gpt-to-kimi.key --output-dir generated-capsules --copy-prompt
 ```
 
-Paste the sender's complete JSON into Terminal and press Ctrl-D on macOS/Linux. Zeitgeister accepts a bare JSON object, one `json` fenced block, or one fenced block surrounded by a sender's explanatory prose. It refuses ambiguous responses containing multiple fenced blocks.
+Terminal should say that verification succeeded and the prompt is copied. This command performs the local work: schema validation, canonical JSON serialization, SHA-256 hashing, HMAC-SHA256 authentication, verification, bundle creation, and prompt export.
 
-To use a saved response instead, replace `--input -` with its path:
+### Step 4 — Kimi accepts the handoff
+
+Open Kimi. Press Command-V in its message box and send. The pasted text is the verified receiver prompt—not the signing key and not a shell command.
+
+Kimi is asked to acknowledge the goal, confirmed decisions, unconfirmed claims, missing artifacts, and first action before continuing.
+
+That is the complete transfer. Codex is not involved.
+
+## Use any sender and receiver
+
+Replace only the two agent labels and the key filename. The same four steps work in either direction and for arbitrary text-capable agents.
+
+| Transfer | Sender command | Transfer command |
+| --- | --- | --- |
+| Gemini to Claude | `python3 -m zeitgeister sender-prompt --from Gemini --to Claude --copy` | `python3 -m zeitgeister transfer --from Gemini --to Claude --input-clipboard --key local-state/gemini-to-claude.key --output-dir generated-capsules --copy-prompt` |
+| Claude to Grok | `python3 -m zeitgeister sender-prompt --from Claude --to Grok --copy` | `python3 -m zeitgeister transfer --from Claude --to Grok --input-clipboard --key local-state/claude-to-grok.key --output-dir generated-capsules --copy-prompt` |
+| Grok to Qwen | `python3 -m zeitgeister sender-prompt --from Grok --to Qwen --copy` | `python3 -m zeitgeister transfer --from Grok --to Qwen --input-clipboard --key local-state/grok-to-qwen.key --output-dir generated-capsules --copy-prompt` |
+| Qwen to Kimi | `python3 -m zeitgeister sender-prompt --from Qwen --to Kimi --copy` | `python3 -m zeitgeister transfer --from Qwen --to Kimi --input-clipboard --key local-state/qwen-to-kimi.key --output-dir generated-capsules --copy-prompt` |
+| Kimi to GPT | `python3 -m zeitgeister sender-prompt --from Kimi --to GPT --copy` | `python3 -m zeitgeister transfer --from Kimi --to GPT --input-clipboard --key local-state/kimi-to-gpt.key --output-dir generated-capsules --copy-prompt` |
+| Any future agent | `python3 -m zeitgeister sender-prompt --from "Agent A" --to "Agent B" --copy` | `python3 -m zeitgeister transfer --from "Agent A" --to "Agent B" --input-clipboard --key local-state/agent-a-to-agent-b.key --output-dir generated-capsules --copy-prompt` |
+
+Agent names are not an allowlist. They label provenance and filenames; adding a new provider requires no Zeitgeister code change.
+
+## Transfer files and attachments
+
+If the receiving agent needs an image, PDF, dataset, or other file, physically include it:
 
 ```sh
-python3 -m zeitgeister handoff \
-  --from GPT \
-  --to Qwen \
-  --input generated-capsules/gpt-response.json \
-  --key local-state/gpt-to-qwen.key \
-  --output-dir generated-capsules
+python3 -m zeitgeister transfer --from Qwen --to Grok --input-clipboard --key local-state/qwen-to-grok.key --output-dir generated-capsules --artifact "/full/path/to/quote-image.png" --copy-prompt
 ```
 
-### 3. Paste the receiver prompt
+Zeitgeister copies the file into the bundle, records its SHA-256 hash, and marks it `included`. A sender AI cannot mark a file included by assertion alone. Files that are merely mentioned remain `missing` or `external`, and the receiver prompt displays that status.
 
-After successful verification, Zeitgeister prints an absolute prompt path such as:
+## What the bundle contains
 
-```text
-Handoff ready. Paste this file into Qwen:
-/path/to/generated-capsules/gpt-to-qwen.prompt.txt
-```
+For GPT to Kimi, the directory `generated-capsules/gpt-to-kimi/` contains:
 
-Paste that file's complete contents into the receiver. It already contains the goal, ethos, constraints, recorded decisions, blockers, next steps, complete provenance, sources, missing-artifact notes, receiver action, and honest trust scope. No extra command or wrapper prompt is required.
+- `input.json` — normalized sender content;
+- `capsule.json` — canonical locally authenticated capsule;
+- `capsule.sig` — non-secret HMAC metadata, not the key;
+- `manifest.json` — filenames, byte counts, and SHA-256 hashes;
+- `verification-report.json` — local verification result, warnings, and key-ignore status;
+- `receiver-prompt.txt` — the only text normally pasted into Kimi;
+- `transfer-summary.txt` — short human-readable status;
+- `artifacts/` — only files physically supplied with `--artifact`.
 
-## Provider examples
+The key is never copied into the bundle. `generated-capsules/` and `local-state/` are ignored by this repository.
 
-All names are labels rather than hard-coded provider integrations:
+## Strict and preview modes
+
+Preview without creating a key or files:
 
 ```sh
-python3 -m zeitgeister sender-prompt --from GPT --to Gemini
-python3 -m zeitgeister sender-prompt --from Gemini --to Claude
-python3 -m zeitgeister sender-prompt --from Claude --to Grok
-python3 -m zeitgeister sender-prompt --from Grok --to Qwen
-python3 -m zeitgeister sender-prompt --from Qwen --to Kimi
-python3 -m zeitgeister sender-prompt --from Kimi --to GPT
-python3 -m zeitgeister sender-prompt --from "Local Model" --to "Research Agent"
+python3 -m zeitgeister transfer --from GPT --to Kimi --input-clipboard --key local-state/gpt-to-kimi.key --output-dir generated-capsules --dry-run
 ```
 
-Use the same names in `handoff`. Zeitgeister safely normalizes them only for output filenames; the human-readable receiver name remains in the prompt.
-
-## Files produced
-
-For `--from GPT --to Qwen`, `handoff` atomically writes:
-
-- `gpt-to-qwen-input.json` — normalized sender content;
-- `gpt-to-qwen.capsule.json` — canonical authenticated capsule;
-- `gpt-to-qwen.prompt.txt` — the only file normally pasted into Qwen;
-- `gpt-to-qwen.verified.json` — readable verified capsule JSON.
-
-The key remains at the specified local path and is never displayed or placed in the prompt. Use an ignored directory such as `local-state/`; use an ignored output directory such as `generated-capsules/`. Zeitgeister refuses to replace an existing same-name package unless you deliberately add `--force`.
-
-## Returning work to the original agent
-
-For a return handoff, repeat the workflow in the opposite direction. Ask the current agent for a fresh sender JSON, then run:
+Reject missing artifacts plus unconfirmed or unsourced structured claims:
 
 ```sh
-python3 -m zeitgeister handoff \
-  --from Qwen \
-  --to GPT \
-  --input - \
-  --key local-state/qwen-to-gpt.key \
-  --output-dir generated-capsules
+python3 -m zeitgeister transfer --from GPT --to Kimi --input-clipboard --key local-state/gpt-to-kimi.key --output-dir generated-capsules --strict
 ```
 
-Do not treat a receiver's narrative response as authenticated merely because the earlier incoming prompt was authenticated. Create a new local capsule for the return transfer.
+The narrower switches are `--fail-on-missing-artifacts` and `--fail-on-unconfirmed-sources`. Zeitgeister also refuses to create a project-local key when Git reports that the path is not ignored.
 
-## Facts, sources, and attachments
+Source strictness is structural: it checks the recorded claim status and presence of source references. It does not browse the web or decide whether an external source is factually correct.
 
-HMAC verification establishes that the locally authenticated capsule has not changed and that its creator possessed the local shared key. It does not establish that an external quote, job listing, historical claim, or web page is true.
+## File-based fallback for other operating systems
 
-The sender should place source URLs, verification timestamps, evidence status, and missing attachments inside `provenance`. The receiver prompt includes that entire object. Images and other attachments are not embedded automatically; attach them separately or record their absence under `missing_artifacts`.
+The `--copy`, `--input-clipboard`, and `--copy-prompt` conveniences use the built-in macOS `pbcopy` and `pbpaste` commands. On another operating system, write and open files instead:
 
-## Common errors
+```sh
+python3 -m zeitgeister sender-prompt --from GPT --to Kimi --output generated-capsules/gpt-to-kimi-sender.txt
+python3 -m zeitgeister transfer --from GPT --to Kimi --input generated-capsules/gpt-response.json --key local-state/gpt-to-kimi.key --output-dir generated-capsules
+```
 
-- **The sender says it cannot access the repository or key:** expected. Use `sender-prompt`; the sender should return JSON only.
-- **A list item is an object:** ask the sender to return plain strings for constraints, blockers, and next steps.
-- **Provenance is an array:** ask for one provenance object containing arrays such as `sources` and `missing_artifacts`.
-- **A prompt file already exists:** use a different sender/receiver label or review the existing package before deliberately adding `--force`.
-- **A key is missing during verification:** locate the original key. Verification never generates a replacement.
-- **The receiver cannot independently verify:** expected for an ordinary web chat without the key. The local user-controlled CLI performed the verification before export.
+Paste the complete contents of `generated-capsules/gpt-to-kimi/receiver-prompt.txt` into Kimi. This avoids interactive standard input and the shell continuation prompt that can appear after an incomplete multiline paste.
+
+## Returning work
+
+A receiver's answer is not automatically authenticated by the incoming capsule. To move the updated work back, run a new transfer in the opposite direction. The receiver becomes the sender and returns a fresh JSON handoff.
+
+## Trust scope
+
+Successful verification means that the capsule matches its SHA-256 hash and HMAC under the supplied local key. It detects changes and demonstrates possession of that local key. It does not encrypt content, make records immutable, prove factual claims, authenticate a provider account, or establish third-party authorship. A web-chat receiver without the key cannot independently perform the local HMAC verification; the verification report records what the user-controlled CLI checked before export.

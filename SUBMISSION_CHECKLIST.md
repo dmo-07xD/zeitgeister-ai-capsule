@@ -9,7 +9,7 @@
 - [x] Non-sensitive sample input is included at `examples/dataset-handoff-input.json`.
 - [x] MIT license is included.
 - [x] Local signing keys, credentials, generated capsules, local state, and temporary files are ignored.
-- [x] Automated test suite passes 30 tests.
+- [x] Automated test suite passes 42 tests.
 - [x] Guided demonstration completes the full workflow.
 
 ## Devpost

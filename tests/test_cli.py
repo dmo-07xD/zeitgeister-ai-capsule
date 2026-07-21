@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from zeitgeister.cli import main
 
@@ -148,3 +149,117 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("Refusing to overwrite", err)
         self.assertEqual(self.invoke(args + ["--force"])[0], 0)
+
+    def test_35_transfer_builds_verified_self_describing_bundle(self):
+        output_dir = self.root / "generated"
+        code, out, _ = self.invoke([
+            "transfer", "--from", "GPT", "--to", "Kimi", "--input", str(self.input),
+            "--key", str(self.key), "--output-dir", str(output_dir),
+        ])
+        self.assertEqual(code, 0)
+        self.assertIn("Transfer ready", out)
+        bundle = output_dir / "gpt-to-kimi"
+        expected = {
+            "input.json", "capsule.json", "capsule.sig", "manifest.json",
+            "verification-report.json", "receiver-prompt.txt", "transfer-summary.txt",
+        }
+        self.assertEqual(expected, {path.name for path in bundle.iterdir()})
+        report = json.loads((bundle / "verification-report.json").read_text(encoding="utf-8"))
+        self.assertTrue(report["verified"])
+        self.assertFalse(json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))["key_included"])
+        self.assertIn("Kimi: continue from this handoff", (bundle / "receiver-prompt.txt").read_text(encoding="utf-8"))
+        self.assertEqual(self.invoke(["--key", str(self.key), "verify", str(bundle / "capsule.json")])[0], 0)
+        stale = bundle / "stale.txt"
+        stale.write_text("old", encoding="utf-8")
+        self.assertEqual(self.invoke([
+            "transfer", "--from", "GPT", "--to", "Kimi", "--input", str(self.input),
+            "--key", str(self.key), "--output-dir", str(output_dir), "--force",
+        ])[0], 0)
+        self.assertFalse(stale.exists())
+
+    def test_36_transfer_dry_run_creates_no_key_or_bundle(self):
+        output_dir = self.root / "generated"
+        code, out, _ = self.invoke([
+            "transfer", "--from", "Claude", "--to", "Grok", "--input", str(self.input),
+            "--key", str(self.key), "--output-dir", str(output_dir), "--dry-run",
+        ])
+        self.assertEqual(code, 0)
+        self.assertIn("No key or output files were created", out)
+        self.assertFalse(self.key.exists())
+        self.assertFalse(output_dir.exists())
+
+    def test_37_transfer_strict_rejects_unconfirmed_claim_before_key_creation(self):
+        value = json.loads(self.input.read_text(encoding="utf-8"))
+        value["claims"] = [{"claim": "Needs checking", "status": "unconfirmed", "source_refs": []}]
+        strict_input = self.root / "strict.json"
+        strict_input.write_text(json.dumps(value), encoding="utf-8")
+        code, _, err = self.invoke([
+            "transfer", "--from", "Gemini", "--to", "Qwen", "--input", str(strict_input),
+            "--key", str(self.key), "--output-dir", str(self.root / "generated"), "--strict",
+        ])
+        self.assertEqual(code, 2)
+        self.assertIn("Unconfirmed or unsourced claims", err)
+        self.assertFalse(self.key.exists())
+
+    def test_38_transfer_physically_bundles_and_hashes_artifact(self):
+        artifact = self.root / "quote.png"
+        artifact.write_bytes(b"non-sensitive-example")
+        value = json.loads(self.input.read_text(encoding="utf-8"))
+        value["artifacts"] = [{"name": "quote.png", "transfer_status": "missing", "sha256": None, "note": "Original image"}]
+        artifact_input = self.root / "artifact-input.json"
+        artifact_input.write_text(json.dumps(value), encoding="utf-8")
+        output_dir = self.root / "generated"
+        code, _, _ = self.invoke([
+            "transfer", "--from", "Qwen", "--to", "Grok", "--input", str(artifact_input),
+            "--key", str(self.key), "--output-dir", str(output_dir), "--artifact", str(artifact),
+        ])
+        self.assertEqual(code, 0)
+        bundle = output_dir / "qwen-to-grok"
+        self.assertEqual((bundle / "artifacts" / "quote.png").read_bytes(), artifact.read_bytes())
+        normalized = json.loads((bundle / "input.json").read_text(encoding="utf-8"))
+        self.assertEqual(normalized["artifacts"][0]["transfer_status"], "included")
+        self.assertEqual(len(normalized["artifacts"][0]["sha256"]), 64)
+
+    def test_39_transfer_refuses_repository_key_not_ignored(self):
+        with patch("zeitgeister.cli._key_git_ignore_status", return_value="not-ignored"):
+            code, _, err = self.invoke([
+                "transfer", "--from", "GPT", "--to", "Kimi", "--input", str(self.input),
+                "--key", str(self.key), "--output-dir", str(self.root / "generated"),
+            ])
+        self.assertEqual(code, 2)
+        self.assertIn("not ignored", err)
+        self.assertFalse(self.key.exists())
+
+    def test_40_receiver_prompt_verifies_before_export(self):
+        self.invoke(["--key", str(self.key), "create", "--input", str(self.input), "--output", str(self.capsule)])
+        prompt = self.root / "kimi.txt"
+        code, out, _ = self.invoke([
+            "receiver-prompt", str(self.capsule), "--key", str(self.key), "--to", "Kimi", "--output", str(prompt),
+        ])
+        self.assertEqual(code, 0)
+        self.assertIn("written atomically", out)
+        self.assertIn("Kimi: continue", prompt.read_text(encoding="utf-8"))
+
+    def test_41_clipboard_path_removes_manual_terminal_paste(self):
+        sender_json = self.input.read_text(encoding="utf-8")
+        copied: list[str] = []
+        with patch("zeitgeister.cli._clipboard_read", return_value=sender_json), patch(
+            "zeitgeister.cli._clipboard_write", side_effect=lambda value: copied.append(value)
+        ):
+            code, out, _ = self.invoke([
+                "transfer", "--from", "GPT", "--to", "Kimi", "--input-clipboard",
+                "--key", str(self.key), "--output-dir", str(self.root / "generated"), "--copy-prompt",
+            ])
+        self.assertEqual(code, 0)
+        self.assertIn("prompt is copied", out)
+        self.assertEqual(len(copied), 1)
+        self.assertIn("# Zeitgeister handoff", copied[0])
+
+    def test_42_sender_prompt_can_copy_exact_instruction(self):
+        copied: list[str] = []
+        with patch("zeitgeister.cli._clipboard_write", side_effect=lambda value: copied.append(value)):
+            code, out, _ = self.invoke(["sender-prompt", "--from", "GPT", "--to", "Kimi", "--copy"])
+        self.assertEqual(code, 0)
+        self.assertIn("Paste it into GPT", out)
+        self.assertEqual(len(copied), 1)
+        self.assertIn('"handoff_to": "Kimi"', copied[0])

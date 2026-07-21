@@ -1,4 +1,5 @@
 {
+  "schema_version": "1.1",
   "project_goal": "Continue a research task from one AI chat to another without losing verified context.",
   "project_ethos": "Preserve evidence, uncertainty, provenance, and the user's intent across agent boundaries.",
   "constraints": [
@@ -19,6 +20,16 @@
     "Paste the verified receiver prompt into the destination AI chat.",
     "Review the receiver's response before recording any new decision as confirmed."
   ],
+  "claims": [
+    {
+      "claim": "The receiver has not yet reviewed this handoff.",
+      "status": "confirmed",
+      "source_refs": [
+        "Current transfer state"
+      ]
+    }
+  ],
+  "artifacts": [],
   "provenance": {
     "handoff_from": "Example Sender",
     "handoff_to": "Example Receiver",

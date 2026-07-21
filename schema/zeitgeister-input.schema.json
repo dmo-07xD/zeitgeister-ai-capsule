@@ -14,6 +14,10 @@
     "provenance"
   ],
   "properties": {
+    "schema_version": {
+      "const": "1.1",
+      "default": "1.1"
+    },
     "project_goal": {
       "type": "string",
       "minLength": 1
@@ -62,6 +66,49 @@
       "items": {
         "type": "string",
         "minLength": 1
+      }
+    },
+    "claims": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim", "status", "source_refs"],
+        "properties": {
+          "claim": {"type": "string", "minLength": 1},
+          "status": {"enum": ["confirmed", "unconfirmed", "inferred", "disputed"]},
+          "source_refs": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "transfer_status", "sha256"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "transfer_status": {"enum": ["included", "missing", "external"]},
+          "sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+          "bundle_path": {"type": "string", "minLength": 1},
+          "note": {"type": "string", "minLength": 1}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"transfer_status": {"const": "included"}}},
+            "then": {
+              "properties": {
+                "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+              }
+            }
+          }
+        ]
       }
     },
     "provenance": {

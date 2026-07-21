@@ -14,4 +14,6 @@ python3 demo.py --guided
 python3 -m zeitgeister --help
 python3 -m zeitgeister sender-prompt --help
 python3 -m zeitgeister handoff --help
+python3 -m zeitgeister transfer --help
+python3 -m zeitgeister receiver-prompt --help
 ```

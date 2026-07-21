@@ -47,6 +47,9 @@ class CoreTests(unittest.TestCase):
     def test_05_missing_field_is_invalid(self):
         del self.capsule["project_ethos"]
         self.assertTrue(validate_capsule(self.capsule))
+        mislabeled = create_capsule(content(), self.key)
+        mislabeled["integrity"]["authentication_algorithm"] = "something-else"
+        self.assertTrue(any("HMAC-SHA256" in error for error in validate_capsule(mislabeled)))
 
     def test_06_decision_requires_rationale(self):
         bad = content()
@@ -120,3 +123,35 @@ class CoreTests(unittest.TestCase):
         self.assertIn('"source": "unit test"', prompt)
         self.assertIn("Qwen: continue from this handoff", prompt)
         self.assertIn("cannot independently authenticate", prompt)
+
+    def test_31_structured_claims_and_artifacts_render(self):
+        structured = content()
+        structured["claims"] = [{"claim": "A source supports this.", "status": "confirmed", "source_refs": ["source-1"]}]
+        structured["artifacts"] = [{"name": "image.png", "transfer_status": "missing", "sha256": None, "note": "Not supplied"}]
+        capsule = create_capsule(structured, self.key)
+        prompt = resume_prompt(capsule, receiver="Kimi")
+        self.assertIn("**CONFIRMED**", prompt)
+        self.assertIn("**MISSING**", prompt)
+        self.assertIn("Receiver acknowledgement", prompt)
+        self.assertTrue(verify_capsule(capsule, self.key)[0])
+
+    def test_32_included_artifact_requires_digest(self):
+        bad = content()
+        bad["artifacts"] = [{"name": "image.png", "transfer_status": "included", "sha256": None}]
+        with self.assertRaisesRegex(CapsuleError, "marked included"):
+            create_capsule(bad, self.key)
+
+    def test_33_claim_status_is_constrained(self):
+        bad = content()
+        bad["claims"] = [{"claim": "Maybe", "status": "probably", "source_refs": []}]
+        with self.assertRaisesRegex(CapsuleError, "status.*must be one of"):
+            normalize_input_content(bad)
+
+    def test_34_update_preserves_claims_and_artifacts(self):
+        structured = content()
+        structured["claims"] = [{"claim": "Known", "status": "confirmed", "source_refs": ["source"]}]
+        structured["artifacts"] = [{"name": "missing.txt", "transfer_status": "missing", "sha256": None}]
+        original = create_capsule(structured, self.key)
+        updated = update_capsule(original, self.key, {"next_steps": ["Continue"], "blockers": [], "decisions": []})
+        self.assertEqual(updated["claims"], original["claims"])
+        self.assertEqual(updated["artifacts"], original["artifacts"])

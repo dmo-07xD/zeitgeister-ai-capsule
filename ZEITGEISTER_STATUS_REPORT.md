@@ -7,7 +7,7 @@ Project: Zeitgeister AI Capsule
 Track: Developer Tools
 Repository: https://github.com/dmo-07xD/zeitgeister-ai-capsule
 
-This report uses the confirmed current repository at `/Users/dmo/Documents/DevPost AI Project`. The task brief referenced an older `/mnt/agents/output/zeitgeister-capsule/` layout and legacy filenames; those are not treated as current facts. The current MVP is a Python 3.10+ standard-library package with eight CLI commands and 30 passing tests.
+This report uses the confirmed current repository at `/Users/dmo/Documents/DevPost AI Project`. The task brief referenced an older `/mnt/agents/output/zeitgeister-capsule/` layout and legacy filenames; those are not treated as current facts. The current MVP is a Python 3.10+ standard-library package with ten CLI commands and 42 passing tests.
 
 ## Blocker 1 — GitHub repository visibility
 
@@ -60,12 +60,15 @@ The Codex product returned Feedback ID `019f811f-ebab-70a1-808f-bd37b1c2dea7` fr
 - SHA-256 content hashing.
 - HMAC-SHA256 local authentication.
 - Parent-hash lineage.
-- Commands: `create`, `validate`, `verify`, `resume`, `update`, `verify-lineage`, `sender-prompt`, `handoff`.
+- Commands: `create`, `validate`, `verify`, `resume`, `update`, `verify-lineage`, `sender-prompt`, `handoff`, `transfer`, `receiver-prompt`.
 - Model-neutral sender/receiver labels support GPT/ChatGPT, Gemini, Claude, Grok, Qwen, Kimi, local models, and other text-capable agents without provider dependencies.
 - Direct local bridging accepts bare JSON, a single fenced JSON block, or a single fenced block surrounded by explanatory model text.
+- Clipboard-safe macOS transfer avoids interactive shell pasting; file-based fallback remains portable.
+- Transfer bundles include a manifest, verification report, receiver prompt, human summary, and physically supplied hashed artifacts.
+- Structured claims record confirmed, unconfirmed, inferred, or disputed status with source references.
 - `resume --format prompt` and `resume --format json`.
 - Fictional, non-sensitive Political Economy country-quarter guided demo.
-- 30 automated unit/integration tests.
+- 42 automated unit/integration tests.
 - Honest trust model: local authentication and edit detection only; no encryption, immutability, or independent authorship proof.
 
 ## Immediate human sequence
