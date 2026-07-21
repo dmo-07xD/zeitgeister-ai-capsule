@@ -1,52 +1,143 @@
 # Zeitgeister AI Capsule
 
-A conversation can appear continuous until the moment it forgets. Then the next agent inherits a summary without knowing what was observed, what was assumed, or why a decision was made. The failure is quiet. The work continues. The error gains confidence.
+Every AI conversation begins with an illusion.
 
-Zeitgeister is a zero-dependency Python CLI for portable AI-agent handoffs. It turns a project’s goal, ethos, constraints, decisions, blockers, next steps, evidence status, artifacts, and provenance into deterministic canonical JSON. It adds a SHA-256 content hash and HMAC-SHA256 local authentication, verifies the result, and renders a receiver-ready prompt.
+It remembers.
 
-It works between GPT/ChatGPT, Gemini, Claude, Grok, Qwen, Kimi, local models, future text-capable agents, and human collaborators. Provider names are labels, not integrations. No model SDK, provider API key, plugin, or Codex intermediary is required.
+Until it does not.
 
-> **Trust model, plainly:** Zeitgeister provides local authentication and edit detection to holders of the same secret key. It does not encrypt content, make records immutable, establish factual truth, or prove authorship to a third party. Never share or commit the signing key.
+A new agent enters the room holding a summary of what happened. It may know the conclusion. It does not know what was observed, what was assumed, which decision survived an argument at two in the morning, or which fact merely sounded real long enough to become policy.
+
+The work continues anyway.
+
+That is the dangerous part.
+
+**Zeitgeister** is a zero-dependency Python CLI for moving deliberate, inspectable context between AI agents. It captures a project goal, ethos, constraints, decisions, rationales, blockers, next steps, evidence status, artifacts, and provenance as deterministic canonical JSON.
+
+Then it does something ordinary and essential: it checks the bytes.
+
+Zeitgeister calculates a SHA-256 content hash, authenticates the capsule with HMAC-SHA256 under a local secret key, verifies the result, and renders a receiver-ready prompt for the next agent.
+
+It works with GPT/ChatGPT, Gemini, Claude, Grok, Qwen, Kimi, local models, future text-capable systems, and human collaborators. Those names are labels, not integrations. Zeitgeister needs no provider SDK, model API key, plugin, cloud account, or Codex intermediary.
+
+> **Trust model, without theater:** Zeitgeister provides local authentication and change detection to people who possess the same local key. It does not encrypt the capsule, make it immutable, establish factual truth, or prove third-party authorship. Never share or commit the signing key.
 
 ## One consequential design decision
 
-We rejected invisible conversational memory in favor of signed, inspectable capsules because continuity without provenance can reproduce misunderstandings with increasing confidence.
+We rejected invisible conversational memory in favor of authenticated, inspectable capsules.
 
-Invisible memory is convenient, but the user cannot reliably inspect its boundary, compare its bytes, or determine which inference survived the journey. Zeitgeister makes the handoff an object. You can open it. You can test it. You can see the sources, the unresolved claims, the missing artifacts, and the reason behind each recorded decision.
+Why?
 
-Here, “signed” means authenticated with HMAC-SHA256 under a user-controlled local shared secret. It is not a public-key signature and does not provide independent authorship verification. That narrow claim is deliberate. The tool becomes stronger by saying exactly where its certainty ends.
+Because continuity without provenance can reproduce a misunderstanding with increasing confidence.
+
+Invisible memory is convenient. It is also difficult to interrogate. The user cannot reliably see its boundary, compare its exact contents, or discover which inference survived the crossing between conversations.
+
+Zeitgeister makes the handoff physical.
+
+Open it.
+
+Read it.
+
+Compare it.
+
+Verify it.
+
+See the confirmed decisions. See the unresolved claims. See the missing artifacts. See why one road was taken and which roads remain unexplored.
+
+Here, "signed" has a deliberately narrow meaning: authenticated using HMAC-SHA256 and a user-controlled local shared secret.
+
+It is not a public-key signature. It does not prove that a particular person, company, or AI provider wrote the capsule. That limitation is not hidden in the basement. It stands at the front door.
+
+A tool becomes more trustworthy when it says exactly where its certainty ends.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    A["Sender conversation"] -->|structured JSON| B["Zeitgeister CLI"]
-    K["Ignored local HMAC key"] --> B
-    B --> C["Schema validation"]
-    C --> D["Canonical JSON"]
-    D --> E["SHA-256 + HMAC-SHA256"]
-    E --> F["Verified capsule"]
-    F --> G["Manifest + verification report"]
-    F --> H["Receiver-ready prompt"]
-    H --> I["Receiver conversation"]
+    subgraph Conversation["Conversation layer - claims may still be wrong"]
+        S["Sender conversation"]
+        R["Receiver conversation"]
+    end
+
+    subgraph Local["User-controlled local trust boundary"]
+        CLI["Zeitgeister CLI"]
+        V["Schema validation"]
+        C["Canonical JSON"]
+        A["SHA-256 content hash<br/>HMAC-SHA256 authentication"]
+        X["Local verification"]
+        K[("Ignored local key")]
+    end
+
+    subgraph Transfer["Inspectable transfer bundle"]
+        CAP["Authenticated capsule"]
+        MAN["Manifest"]
+        REP["Verification report"]
+        ART["Included artifacts"]
+        P["Receiver-ready prompt"]
+    end
+
+    S -->|"Structured handoff JSON"| CLI
+    CLI --> V --> C --> A --> X
+    K --> A
+    X --> CAP
+    CAP --> MAN
+    CAP --> REP
+    CAP --> ART
+    CAP --> P
+    P --> R
 ```
 
-The authenticated payload contains every top-level capsule field except `integrity`. Zeitgeister serializes it as UTF-8 JSON with sorted keys, compact separators, and no NaN values. SHA-256 detects content changes. HMAC-SHA256 authenticates the same bytes with the local key. Updates verify their parent first and record the parent content hash, producing an inspectable lineage.
+The conversation layer remains epistemically dangerous: an AI can still be wrong.
 
-The preferred `transfer` command creates a bundle containing:
+The local trust boundary answers a narrower question:
 
-- `input.json` — normalized sender content;
-- `capsule.json` — canonical locally authenticated capsule;
-- `capsule.sig` — non-secret HMAC metadata, never the key;
-- `manifest.json` — file paths, sizes, and SHA-256 hashes;
-- `verification-report.json` — verification result, warnings, and trust scope;
-- `receiver-prompt.txt` — the text given to the next agent;
-- `transfer-summary.txt` — concise human-readable status;
-- `artifacts/` — only files physically supplied with `--artifact`.
+> Is this the same authenticated content that the local user approved and transferred?
+
+The authenticated payload includes every top-level capsule field except `integrity`. Zeitgeister serializes the payload as UTF-8 JSON with sorted keys, compact separators, and no NaN values.
+
+SHA-256 detects content changes.
+
+HMAC-SHA256 authenticates the same bytes using the local key.
+
+When a capsule is updated, Zeitgeister verifies its parent first and records the parent content hash. The result is an inspectable lineage rather than a fog of inherited context.
+
+```mermaid
+flowchart LR
+    C1["Capsule 1<br/>content hash: A"] -->|"parent hash: A"| C2["Capsule 2<br/>content hash: B"]
+    C2 -->|"parent hash: B"| C3["Capsule 3<br/>content hash: C"]
+    T["Altered or missing capsule"] -. "lineage verification fails" .-> C3
+```
+
+## What a transfer contains
+
+The recommended `transfer` command produces a self-describing bundle:
+
+| File | Purpose |
+| --- | --- |
+| `input.json` | Normalized content returned by the sending agent |
+| `capsule.json` | Canonical, locally authenticated capsule |
+| `capsule.sig` | Non-secret HMAC metadata; the key is never included |
+| `manifest.json` | File paths, sizes, and SHA-256 hashes |
+| `verification-report.json` | Verification results, warnings, and trust limitations |
+| `receiver-prompt.txt` | The exact text given to the receiving agent |
+| `transfer-summary.txt` | Short human-readable transfer status |
+| `artifacts/` | Only files physically supplied through `--artifact` |
+
+A filename mentioned in conversation is not an artifact.
+
+A URL pointing toward a file is not an artifact.
+
+A model saying that an image was transferred does not make the image appear.
+
+Zeitgeister marks that difference explicitly.
 
 ## Installation
 
-Requirements: Python 3.10+ and Git. The core implementation uses only the Python standard library.
+Requirements:
+
+- Python 3.10 or newer
+- Git
+- No third-party Python packages
 
 ```sh
 git clone https://github.com/dmo-07xD/zeitgeister-ai-capsule.git
@@ -54,38 +145,69 @@ cd zeitgeister-ai-capsule
 python3 -m zeitgeister --help
 ```
 
-No package installation is required. Project-local keys belong under the ignored `local-state/` directory. Generated handoffs belong under the ignored `generated-capsules/` directory.
+No package installation is required.
 
-## 60-second test path
+Local keys belong in the ignored `local-state/` directory. Generated transfers belong in the ignored `generated-capsules/` directory.
 
-From a clean checkout, run these two commands:
+They remain local. They stay out of Git.
+
+## The 60-second test
+
+From a clean checkout, run:
 
 ```sh
-python3 -m zeitgeister transfer --from "Example Sender" --to "Example Receiver" --input examples/inter-agent-handoff-input.json --key local-state/quickstart.key --output-dir generated-capsules --force
-python3 -m zeitgeister receiver-prompt generated-capsules/example-sender-to-example-receiver/capsule.json --key local-state/quickstart.key --to "Example Receiver"
+python3 -m zeitgeister transfer \
+  --from "Example Sender" \
+  --to "Example Receiver" \
+  --input examples/inter-agent-handoff-input.json \
+  --key local-state/quickstart.key \
+  --output-dir generated-capsules \
+  --force
 ```
 
-The first command validates the sample, generates the local key if needed, creates the capsule and bundle, then verifies its SHA-256 hash and HMAC. The second command independently reloads the capsule, requires the existing key, verifies it again, and prints the receiver prompt.
+Then independently verify the capsule and render its receiving prompt:
 
-For the automated proof:
+```sh
+python3 -m zeitgeister receiver-prompt \
+  generated-capsules/example-sender-to-example-receiver/capsule.json \
+  --key local-state/quickstart.key \
+  --to "Example Receiver"
+```
+
+The first command:
+
+1. validates the sample input;
+2. generates a secure local key if necessary;
+3. creates the capsule;
+4. builds the transfer bundle;
+5. checks its SHA-256 hash;
+6. verifies its HMAC-SHA256 authentication.
+
+The second command reloads the capsule, requires the existing key, verifies it again, and prints the receiver-ready prompt.
+
+Run the automated test suite with:
 
 ```sh
 python3 -m unittest discover -s tests -v
 ```
 
-## Sample output
+## What success looks like
 
-The exact hash changes because a new capsule ID and timestamp are created, but a successful transfer looks like this:
+Capsule IDs, timestamps, and hashes will vary. A successful transfer resembles this:
 
 ```text
 Verified: SHA-256 and HMAC-SHA256 match (content 8d46f0c9a7b1…).
+
 Transfer ready. Paste this file into Example Receiver:
 /path/to/zeitgeister-ai-capsule/generated-capsules/example-sender-to-example-receiver/receiver-prompt.txt
-Bundle: /path/to/zeitgeister-ai-capsule/generated-capsules/example-sender-to-example-receiver
+
+Bundle:
+/path/to/zeitgeister-ai-capsule/generated-capsules/example-sender-to-example-receiver
+
 The signing key stayed local and was not displayed or bundled.
 ```
 
-The rendered prompt begins with visible continuity rather than hidden state:
+The receiver does not inherit a mysterious whisper. It receives an explicit brief:
 
 ```text
 # Zeitgeister handoff
@@ -93,65 +215,104 @@ The rendered prompt begins with visible continuity rather than hidden state:
 ## Goal
 Continue a research task from one AI chat to another without losing verified context.
 
+## Confirmed decisions
+...
+
 ## Claims and evidence status
 ...
 
-## Artifact transfer status
+## Missing or included artifacts
 ...
 
-## Receiver acknowledgement
-Before doing substantive work, briefly state the preserved goal,
-confirmed decisions, unresolved claims, missing artifacts, and first action.
+## Sources and provenance
+...
+
+## Action requested
+...
+
+## Trust scope
+...
 ```
 
 ## Simplest guided transfer
 
-On macOS, one command walks through the whole browser-to-browser handoff:
+On macOS, a single command manages the browser-to-browser workflow:
 
 ```sh
-python3 -m zeitgeister guided-transfer --from GPT --to Qwen --key local-state/gpt-to-qwen.key
+python3 -m zeitgeister guided-transfer \
+  --from GPT \
+  --to Qwen \
+  --key local-state/gpt-to-qwen.key
 ```
 
-Zeitgeister copies the sender instruction and pauses. Follow the numbered Terminal directions: paste into GPT, copy GPT's completed response, return to Terminal, and press Return. Zeitgeister then finds the handoff object, validates and authenticates it, builds the transfer bundle, and copies the verified Qwen prompt. Paste once more into Qwen.
+Terminal then guides the human through four actions:
 
-Use `--force` only when you intentionally want to replace an existing generated GPT-to-Qwen bundle.
+1. Paste the copied sender instruction into GPT.
+2. Send it and copy the complete GPT response.
+3. Return to Terminal and press Return.
+4. Paste the verified receiver prompt into Qwen.
 
-The sender and receiver names are ordinary labels. Use this generic shape:
+That is the whole crossing.
+
+To use different agents, change only the labels and key filename:
 
 ```sh
-python3 -m zeitgeister guided-transfer --from "SENDER" --to "RECEIVER" --key local-state/sender-to-receiver.key
+python3 -m zeitgeister guided-transfer \
+  --from "SENDER" \
+  --to "RECEIVER" \
+  --key local-state/sender-to-receiver.key
 ```
 
-Two browser-to-browser combinations were exercised successfully during the project walkthrough:
+Confirmed project walkthroughs include:
 
-| Transfer | Exact command |
+| Transfer | Command |
 | --- | --- |
 | GPT to Qwen | `python3 -m zeitgeister guided-transfer --from GPT --to Qwen --key local-state/gpt-to-qwen.key` |
 | Grok to Kimi | `python3 -m zeitgeister guided-transfer --from Grok --to Kimi --key local-state/grok-to-kimi.key` |
 
-This confirms the user-controlled workflow for those sessions; it is not a claim that provider interfaces will never change.
+These successful sessions demonstrate the user-controlled workflow. They do not promise that every provider browser interface will remain unchanged forever. Nothing involving browser interfaces deserves that kind of optimism.
 
-## Manual GPT-to-Kimi clipboard workflow
+Use `--force` only when replacement of an existing transfer bundle is intentional.
 
-On macOS, Terminal can move the text through the clipboard without interactive multiline input.
+## Manual clipboard workflow
 
-1. Copy the exact sender instruction:
+Suppose the conversation must move from GPT to Kimi.
 
-   ```sh
-   python3 -m zeitgeister sender-prompt --from GPT --to Kimi --copy
-   ```
+First, copy the sender instruction:
 
-2. Paste it into the GPT conversation, send it, and copy GPT’s complete JSON response.
+```sh
+python3 -m zeitgeister sender-prompt \
+  --from GPT \
+  --to Kimi \
+  --copy
+```
 
-3. Create, authenticate, verify, bundle, and copy the receiver prompt:
+Paste it into GPT. Send it. Copy the complete GPT JSON response.
 
-   ```sh
-   python3 -m zeitgeister transfer --from GPT --to Kimi --input-clipboard --key local-state/gpt-to-kimi.key --output-dir generated-capsules --copy-prompt
-   ```
+Then run:
 
-   The clipboard reader automatically finds one complete Zeitgeister object inside common invisible markers, a Markdown code fence, or brief model prose. If the clipboard still contains the Terminal confirmation or sender template, the error names that exact mistake and tells you what to copy next.
+```sh
+python3 -m zeitgeister transfer \
+  --from GPT \
+  --to Kimi \
+  --input-clipboard \
+  --key local-state/gpt-to-kimi.key \
+  --output-dir generated-capsules \
+  --copy-prompt
+```
 
-4. Paste into Kimi and send.
+Zeitgeister reads the clipboard, locates one complete handoff object, validates it, authenticates it, creates the bundle, verifies the capsule, and replaces the clipboard with the Kimi-ready prompt.
+
+Paste that prompt into Kimi.
+
+The clipboard reader accepts:
+
+- clean JSON;
+- JSON inside a Markdown code fence;
+- one JSON object surrounded by short explanatory prose;
+- common invisible clipboard characters.
+
+It refuses multiple distinct handoff objects because ambiguity is not continuity. It is a coin toss wearing a necktie.
 
 Replace the sender and receiver labels to use Gemini, Claude, Grok, Qwen, Kimi, GPT, a local model, or another text-capable agent. The file-based cross-platform workflow, reverse handoffs, strict mode, and attachment handling are documented in [INTER_AGENT_GUIDE.md](INTER_AGENT_GUIDE.md).
 
@@ -159,17 +320,18 @@ Replace the sender and receiver labels to use Gemini, Claude, Grok, Qwen, Kimi, 
 
 | Command | Purpose |
 | --- | --- |
-| `guided-transfer --from GPT --to Qwen --key KEY` | Guide the complete interactive clipboard transfer with one Terminal command. |
-| `sender-prompt --from GPT --to Kimi [--copy]` | Produce the schema-constrained instruction for the sender. |
-| `transfer --from GPT --to Kimi --input INPUT --key KEY` | Validate, authenticate, verify, and build a self-describing transfer bundle. |
-| `receiver-prompt CAPSULE --key KEY --to Kimi` | Re-verify a capsule before rendering or copying its receiver prompt. |
-| `create --input CONTENT.json --output CAPSULE.json` | Create and locally authenticate a root capsule. |
-| `validate CAPSULE.json` | Check capsule structure without using a key. |
-| `verify CAPSULE.json` | Verify structure, content hash, key identity, and HMAC. |
-| `resume CAPSULE.json --format prompt` | Verify and render an agent-ready prompt. `--format json` exports verified JSON. |
-| `update CAPSULE.json --output NEXT.json` | Verify the parent and create a linked successor. |
-| `verify-lineage FIRST.json NEXT.json ...` | Authenticate capsules and verify their parent-hash sequence. |
-| `handoff ...` | Preserve compatibility with the earlier flat-file export workflow. |
+| `guided-transfer --from GPT --to Qwen --key KEY` | Walk through a complete interactive browser-to-browser transfer |
+| `sender-prompt --from GPT --to Kimi [--copy]` | Generate the structured instruction for the sending agent |
+| `transfer --from GPT --to Kimi --input INPUT --key KEY` | Validate, authenticate, verify, and package a handoff |
+| `receiver-prompt CAPSULE --key KEY --to Kimi` | Reverify a capsule before producing the receiving prompt |
+| `create --input CONTENT.json --output CAPSULE.json` | Create and authenticate a root capsule |
+| `validate CAPSULE.json` | Check capsule structure without using a key |
+| `verify CAPSULE.json` | Verify structure, content hash, key identity, and HMAC |
+| `resume CAPSULE.json --format prompt` | Render an authenticated capsule as an agent-ready prompt |
+| `resume CAPSULE.json --format json` | Export the complete verified capsule as JSON |
+| `update CAPSULE.json --output NEXT.json` | Verify a parent and create a linked successor |
+| `verify-lineage FIRST.json NEXT.json ...` | Authenticate a sequence and check its parent hashes |
+| `handoff ...` | Support the earlier flat-file handoff workflow |
 
 `transfer` also supports `--artifact`, `--dry-run`, `--strict`, `--fail-on-missing-artifacts`, `--fail-on-unconfirmed-sources`, and guarded `--force` replacement.
 
@@ -177,20 +339,37 @@ Replace the sender and receiver labels to use Gemini, Claude, Grok, Qwen, Kimi, 
 
 The sender-facing schema is [schema/zeitgeister-input.schema.json](schema/zeitgeister-input.schema.json). The authenticated output schema is [schema/zeitgeister-capsule.schema.json](schema/zeitgeister-capsule.schema.json).
 
-Every new capsule records:
+Every capsule records:
 
-- project goal and ethos;
+- the project goal;
+- the project ethos;
 - constraints;
 - decisions with rationales;
-- blockers and next steps;
-- claims marked `confirmed`, `unconfirmed`, `inferred`, or `disputed`, with source references;
-- artifacts marked `included`, `missing`, or `external`;
+- blockers;
+- next steps;
+- structured claims and their evidence status;
+- artifacts and their transfer status;
 - provenance metadata;
 - UTC creation and update timestamps;
-- parent content hash;
+- a parent content hash;
 - SHA-256 and HMAC-SHA256 integrity metadata.
 
-An artifact cannot become `included` merely because an AI says it was transferred. The local command must receive the physical file with `--artifact`; it then copies the bytes into the bundle and records their SHA-256 hash.
+Claims can be marked:
+
+- `confirmed`
+- `unconfirmed`
+- `inferred`
+- `disputed`
+
+Artifacts can be marked:
+
+- `included`
+- `missing`
+- `external`
+
+An artifact becomes `included` only when the local command receives the physical file through `--artifact`, copies its bytes into the bundle, and records its SHA-256 hash.
+
+The model does not get to declare matter into existence.
 
 ## Guided demonstration
 
@@ -198,9 +377,22 @@ An artifact cannot become `included` merely because an AI says it was transferre
 python3 demo.py --guided
 ```
 
-The demonstration uses a fictional, non-sensitive Political Economy country-quarter workflow. It shows creation, validation, verification, resume, deliberate tampering and failed verification, authenticated update, and lineage verification. The temporary key is never displayed or written to the repository.
+The demonstration uses fictional, non-sensitive Political Economy country-quarter data. In under three minutes, it shows:
 
-For reproducible screenshots, run the guided demo and capture the create, verified resume, tamper failure, and lineage success stages. Preserve the supplied `Zeitgeister logo.png` and `Zeitgeister thumbnail.png` for the Devpost listing.
+```mermaid
+flowchart LR
+    A["Create"] --> B["Validate"]
+    B --> C["Verify"]
+    C --> D["Tamper"]
+    D --> E["Expected verification failure"]
+    E --> F["Resume"]
+    F --> G["Authenticated update"]
+    G --> H["Verify lineage"]
+```
+
+The temporary signing key is never displayed and is never written into the repository.
+
+For reproducible screenshots, run the guided demo and capture the creation, verified resume, tamper failure, and lineage success stages. Preserve the supplied `Zeitgeister logo.png` and `Zeitgeister thumbnail.png` for the Devpost listing.
 
 ## Testing
 
@@ -211,35 +403,83 @@ python3 -m zeitgeister --help
 python3 -m zeitgeister transfer --help
 ```
 
-The suite contains 42 unit and integration tests covering canonical serialization, key permissions, normal verification, malformed, fenced, prose-wrapped, and invisible-character AI input, ambiguous-object refusal, structured claims, artifact validation and hashing, dry runs, strict failures, Git-ignore protection, clipboard transfer, tampering, missing and wrong keys, guarded updates, prompt rendering, transfer manifests, overwrite protection, lineage, and every CLI command.
+The suite contains 42 unit and integration tests.
+
+It tests canonical serialization, key permissions, verification, malformed input, fenced JSON, prose-wrapped JSON, invisible clipboard characters, ambiguous-object refusal, structured claims, artifact hashing, dry runs, strict failures, Git-ignore protection, tampering, missing keys, wrong keys, guarded updates, prompt rendering, transfer manifests, overwrite protection, lineage, and every CLI command.
+
+The machine does not care about the pitch.
+
+It wants proof.
 
 ## Limitations
 
-- **No encryption.** Capsule text and bundled artifacts remain readable.
-- **No immutability.** Files can be changed or deleted; verification detects authenticated-content changes when the original key remains trustworthy.
-- **No public authorship proof.** HMAC demonstrates possession of a shared local secret, not the identity of a person, model, or provider account.
-- **No factual oracle.** A correctly authenticated false claim remains false. Evidence status and source references make uncertainty visible; they do not settle it.
-- **No protection after key compromise.** Anyone holding the local key can create capsules that verify under that key.
-- **No automatic receiver-side authentication in ordinary web chats.** A receiver without the key cannot independently verify the HMAC. The user-controlled CLI verifies before export.
-- **No automatic transfer of mentioned files.** Attachments must be physically supplied with `--artifact`; otherwise they remain `missing` or `external`.
-- **No guarantee of model obedience.** The receiver prompt preserves structure and asks for acknowledgement, but a model can still misunderstand or disregard instructions.
-- **Clipboard convenience is macOS-specific.** `--copy`, `--input-clipboard`, and `--copy-prompt` use the built-in `pbcopy` and `pbpaste` tools. File-based transfer remains portable.
+Zeitgeister is intentionally narrow.
+
+- **It is not encryption.** Capsule text and bundled artifacts remain readable.
+- **It is not immutability.** Files can be changed or deleted. Verification can reveal authenticated-content changes.
+- **It is not public authorship proof.** HMAC proves possession of a shared key, not the identity of a person, model, or provider.
+- **It is not a factual oracle.** An authenticated falsehood remains a falsehood.
+- **It cannot survive key compromise.** Anyone holding the key can create capsules that verify under that key.
+- **It does not authenticate inside ordinary receiver chats.** The user-controlled CLI verifies the capsule before export.
+- **It does not automatically transfer mentioned files.** Physical artifacts must be supplied explicitly.
+- **It cannot guarantee model obedience.** A receiving AI can still misunderstand or ignore the prompt.
+- **Its clipboard convenience is macOS-specific.** File-based transfers remain portable.
+
+These are not footnotes to be buried after the applause.
+
+They are the perimeter.
 
 ## How Codex and GPT-5.6 were used
 
-The project began as a question about continuity. Not endless memory. Accountable memory.
+The project began with a question:
 
-Codex, using GPT-5.6, worked inside the repository as the implementation collaborator. It inspected the existing files, turned the capsule concept into a Python standard-library CLI, wrote deterministic serialization and local authentication, built the guided demonstration, documented the schemas, and expanded the test suite. The human developer set the goal, reviewed the claims, chose the local-trust boundary, ran the product, and decided what could honestly be said.
+What survives when a conversation ends?
 
-The tool improved through contact with real failure. Browser agents said they could not reach the ignored key. A multiline shell paste left the terminal waiting at a continuation prompt. One model described a command instead of executing the requested intellectual handoff. Source URLs survived while the image they referred to vanished. A receiver mistook locally verified transport for verified truth.
+Not endless memory. Not omniscience. Something smaller. Something inspectable.
 
-Those failures became features. `sender-prompt` asks an agent only for content it can produce. `transfer` performs the local work in one command. Clipboard mode removes the fragile terminal paste. Structured claims separate confirmation from inference. Artifact states distinguish a file that exists from a file merely named. The manifest and verification report leave tracks in the snow.
+Accountable memory.
 
-GPT-5.6 was most useful where the code met the claim. It helped distinguish hashing from authentication, authentication from encryption, lineage from immutability, and local key possession from third-party authorship. It also helped test hostile and malformed inputs, tighten actionable errors, and keep every provider behind the same model-neutral boundary.
+Codex, using GPT-5.6, worked inside the repository as the implementation collaborator. It inspected the files, converted the capsule concept into a Python standard-library CLI, implemented deterministic serialization and local authentication, built the demonstration, documented the schemas, and expanded the test suite.
 
-The model proposed. The tests answered. Forty-two of them now stand between the idea and an easy illusion.
+The human developer set the objective, defended the project ethos, reviewed its claims, chose the local-trust boundary, tested the workflows, and decided what could honestly be said.
 
-Zeitgeister does not ask an AI to be the authority on its own memory. It gives the user an object to inspect when the conversation moves on.
+Then reality entered the laboratory.
+
+Browser agents said they could not access the ignored local key. A multiline JSON paste left the shell trapped at a continuation prompt. One model carefully explained a command instead of producing the requested handoff. Source URLs crossed between agents while the image they described disappeared somewhere behind them. A receiver confused authenticated transport with factual truth.
+
+Good.
+
+Those failures gave the project its final shape.
+
+`sender-prompt` asks the sending agent only for content it can actually produce.
+
+`transfer` performs the local cryptographic work.
+
+Clipboard mode removes the dangerous multiline shell paste.
+
+Structured claims separate confirmation from inference.
+
+Artifact states distinguish a transferred file from a file merely remembered by name.
+
+The manifest and verification report leave tracks behind the machine.
+
+GPT-5.6 was most useful at the border between code and claim. It helped distinguish hashing from authentication, authentication from encryption, lineage from immutability, and local-key possession from third-party authorship.
+
+It proposed.
+
+The tests answered.
+
+Forty-two tests now stand between the product and an easy illusion.
+
+Zeitgeister does not ask an AI to become the unquestioned authority on its own memory.
+
+It gives the user something better:
+
+An object that can survive the journey.
+
+An object that can be opened.
+
+An object that can be questioned.
 
 ## License
 
