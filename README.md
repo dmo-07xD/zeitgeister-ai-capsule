@@ -51,7 +51,7 @@ For stable verification, the signed payload is every top-level field except `int
 python3 demo.py --guided
 ```
 
-The guided demo pauses after creation; validation and verification; `resume --format prompt`; deliberate tampering and expected verification failure; authenticated update; and lineage verification. It uses a fictional Political Economy country-quarter workflow, a throwaway local key, and non-sensitive data. Press Enter at each pause; if run without an interactive terminal, it continues automatically.
+The guided demo pauses after creation; validation and verification; deliberate tampering and expected verification failure; `resume --format prompt`; authenticated update; and lineage verification. It uses a fictional Political Economy country-quarter workflow, a throwaway local key, and non-sensitive data. Press Enter at each pause; if run without an interactive terminal, it continues automatically.
 
 For reproducible screenshots, capture these terminal stages (never show the `*.key` file or its contents):
 
